@@ -2,6 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O3 -std=c11 -I include -mavx2 -mfma -funroll-loops
 CFLAGS_SCALAR = -Wall -Wextra -O3 -std=c11 -I include -fno-tree-vectorize
 CFLAGS_AVX = -Wall -Wextra -O3 -std=c11 -I include -mavx2 -mfma -funroll-loops -DBUILD_AVX
+CFLAGS_SCHOOLBOOK = -Wall -Wextra -O3 -std=c11 -I include -mavx2 -mfma -funroll-loops -DBUILD_SCHOOLBOOK
 LDFLAGS = -lm
 
 SRC = src
@@ -9,7 +10,7 @@ OBJ = obj
 TEST = test
 LIB = lib
 
-.PHONY: all clean build build-scalar build-avx build-mersenne build-mersenne-avx test bench bench-scalar bench-avx bench-mersenne bench-mersenne-avx
+.PHONY: all clean build build-scalar build-avx build-mersenne build-mersenne-avx build-schoolbook test bench bench-scalar bench-avx bench-mersenne bench-mersenne-avx bench-schoolbook
 
 all: build
 
@@ -22,6 +23,8 @@ build-avx: $(OBJ) $(LIB)/libfft_avx.a
 build-mersenne: $(OBJ) $(LIB)/libfft_mersenne.a
 
 build-mersenne-avx: $(OBJ) $(LIB)/libfft_mersenne_avx.a
+
+build-schoolbook: $(OBJ) $(LIB)/libfft_schoolbook.a
 
 $(OBJ):
 	mkdir -p $(OBJ)
@@ -60,6 +63,10 @@ $(LIB)/libfft_mersenne_avx.a: $(OBJ)/bigint.o $(OBJ)/fft_split_avx.o $(OBJ)/ntt_
 	mkdir -p $(LIB)
 	ar rcs $@ $^
 
+$(LIB)/libfft_schoolbook.a: $(OBJ)/bigint.o $(OBJ)/mult_schoolbook.o
+	mkdir -p $(LIB)
+	ar rcs $@ $^
+
 test: build
 	$(CC) $(CFLAGS) $(TEST)/test.c -L $(LIB) -lfft -o $(TEST)/test $(LDFLAGS)
 	./$(TEST)/test
@@ -87,6 +94,10 @@ bench-mersenne: build-mersenne
 bench-mersenne-avx: build-mersenne-avx
 	$(CC) $(CFLAGS_AVX) $(TEST)/bench.c -L $(LIB) -lfft_mersenne_avx -o $(TEST)/bench_mersenne_avx $(LDFLAGS)
 	./$(TEST)/bench_mersenne_avx
+
+bench-schoolbook: build-schoolbook
+	$(CC) $(CFLAGS_SCHOOLBOOK) $(TEST)/bench.c -L $(LIB) -lfft_schoolbook -o $(TEST)/bench_schoolbook $(LDFLAGS)
+	./$(TEST)/bench_schoolbook
 
 clean:
 	rm -rf $(OBJ) $(TEST)/test $(TEST)/test_scalar $(TEST)/bench $(TEST)/bench_scalar $(TEST)/bench_avx $(TEST)/bench_mersenne $(LIB)

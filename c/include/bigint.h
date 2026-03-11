@@ -16,6 +16,11 @@
 #define biguint_mul_ntt_mont biguint_mul_ntt_mont_avx
 #endif
 
+#if defined(BUILD_SCHOOLBOOK)
+#define biguint_mul_fft_split biguint_mul_schoolbook
+#define biguint_mul_ntt_mont biguint_mul_schoolbook
+#endif
+
 typedef struct {
     uint64_t *words;
     size_t len;
@@ -36,6 +41,10 @@ BigUInt *biguint_add(const BigUInt *a, const BigUInt *b);
 
 BigUInt *biguint_mul_fft_split(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont(const BigUInt *a, const BigUInt *b);
+
+#if defined(BUILD_SCHOOLBOOK)
+BigUInt *biguint_mul_schoolbook(const BigUInt *a, const BigUInt *b);
+#endif
 
 #if HAS_AVX
 BigUInt *biguint_mul_fft_split_avx(const BigUInt *a, const BigUInt *b);
