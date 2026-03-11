@@ -21,8 +21,8 @@ BenchFFT-NTT/
 ├── rust/                   # Rust implementation
 │   ├── Cargo.toml
 │   └── src/
-│       ├── lib.rs         # FFT/NTT implementations
-│       └── main.rs        # Benchmark
+│       ├── lib.rs         # FFT/NTT + AVX implementations
+│       └── main.rs        # Benchmark runner
 └── lean/                  # Lean4 formal verification (placeholder)
     ├── Formal.lean
     └── README.md
@@ -90,7 +90,7 @@ make build-avx
 # Run C tests
 make test
 
-# Run C benchmarks
+# Run C benchmarks (auto-vectorized)
 make bench
 
 # Run C scalar benchmarks
@@ -99,10 +99,11 @@ make bench-scalar
 # Run C AVX benchmarks
 make bench-avx
 
-# Build and run Rust benchmarks
-make bench-rust
+# Build and run Rust benchmarks (with AVX intrinsics)
+cd rust && RUSTFLAGS="-C target-cpu=native" cargo build --release
+./rust/target/release/bench
 
-# Run all benchmarks
+# Run all benchmarks (C + Rust)
 make bench-all
 
 # Clean build artifacts
@@ -150,19 +151,20 @@ Tested on vector sizes matching PQC algorithms (ML-KEM, ML-DSA). Three C build c
 | 3072 | Extended | 4.91 ms | 15.24 ms |
 | 4096 | Extended | 2.15 ms | 7.25 ms |
 
-### Comparison: C vs Rust
+### Comparison: C vs Rust (All with AVX)
 
-| Size | Type | C FFT | C NTT | Rust FFT | Rust NTT |
-|------|------|-------|-------|----------|----------|
-| 256  | ML-KEM-512 | 5.49 ms | 12.79 ms | 6.3 ms | 20.8 ms |
-| 512  | ML-KEM-768 | 4.09 ms | 12.56 ms | 4.4 ms | 18.7 ms |
-| 1024 | ML-KEM-1024 | 3.63 ms | 10.63 ms | 3.9 ms | 16.3 ms |
-| 2048 | ML-DSA | 4.50 ms | 11.09 ms | 4.6 ms | 17.6 ms |
-| 3072 | Extended | 6.56 ms | 11.54 ms | 5.5 ms | 18.7 ms |
-| 4096 | Extended | 2.90 ms | 6.86 ms | 3.3 ms | 11.6 ms |
+| Size | Type | C FFT | C NTT | Rust FFT (AVX) | Rust NTT (AVX) |
+|------|------|-------|-------|----------------|----------------|
+| 256  | ML-KEM-512 | 2.63 ms | 12.05 ms | 5.25 ms | 19.90 ms |
+| 512  | ML-KEM-768 | 2.70 ms | 12.27 ms | 3.34 ms | 18.86 ms |
+| 1024 | ML-KEM-1024 | 2.28 ms | 10.77 ms | 2.50 ms | 16.87 ms |
+| 2048 | ML-DSA | 3.33 ms | 11.14 ms | 4.61 ms | 18.11 ms |
+| 3072 | Extended | 4.74 ms | 14.25 ms | 4.15 ms | 19.17 ms |
+| 4096 | Extended | 2.11 ms | 6.90 ms | 2.41 ms | 11.34 ms |
 
 ### Key Observations
 
+- **C vs Rust AVX**: C is ~2x faster for FFT and ~1.5x faster for NTT
 - **FFT**: Power-of-two sizes (1024, 4096) show best performance
 - **AVX Intrinsics**: 30-40% faster than auto-vectorized for FFT at 512-1024 sizes
 - **C vs Rust**: C FFT and Rust FFT are very close (~10% difference); C NTT is ~35-40% faster than Rust NTT
