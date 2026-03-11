@@ -9,7 +9,7 @@ OBJ = obj
 TEST = test
 LIB = lib
 
-.PHONY: all clean build build-scalar build-avx test bench bench-scalar bench-avx
+.PHONY: all clean build build-scalar build-avx build-mersenne build-mersenne-avx test bench bench-scalar bench-avx bench-mersenne bench-mersenne-avx
 
 all: build
 
@@ -18,6 +18,10 @@ build: $(OBJ) $(LIB)/libfft.a
 build-scalar: $(OBJ) $(LIB)/libfft_scalar.a
 
 build-avx: $(OBJ) $(LIB)/libfft_avx.a
+
+build-mersenne: $(OBJ) $(LIB)/libfft_mersenne.a
+
+build-mersenne-avx: $(OBJ) $(LIB)/libfft_mersenne_avx.a
 
 $(OBJ):
 	mkdir -p $(OBJ)
@@ -48,6 +52,14 @@ $(LIB)/libfft_avx.a: $(OBJ)/bigint.o $(OBJ)/fft_split_avx.o $(OBJ)/ntt_mont_avx.
 	mkdir -p $(LIB)
 	ar rcs $@ $^
 
+$(LIB)/libfft_mersenne.a: $(OBJ)/bigint.o $(OBJ)/fft_split.o $(OBJ)/ntt_mersenne.o
+	mkdir -p $(LIB)
+	ar rcs $@ $^
+
+$(LIB)/libfft_mersenne_avx.a: $(OBJ)/bigint.o $(OBJ)/fft_split_avx.o $(OBJ)/ntt_mersenne_avx.o
+	mkdir -p $(LIB)
+	ar rcs $@ $^
+
 test: build
 	$(CC) $(CFLAGS) $(TEST)/test.c -L $(LIB) -lfft -o $(TEST)/test $(LDFLAGS)
 	./$(TEST)/test
@@ -68,5 +80,13 @@ bench-avx: build-avx
 	$(CC) $(CFLAGS_AVX) $(TEST)/bench.c -L $(LIB) -lfft_avx -o $(TEST)/bench_avx $(LDFLAGS)
 	./$(TEST)/bench_avx
 
+bench-mersenne: build-mersenne
+	$(CC) $(CFLAGS) $(TEST)/bench.c -L $(LIB) -lfft_mersenne -o $(TEST)/bench_mersenne $(LDFLAGS)
+	./$(TEST)/bench_mersenne
+
+bench-mersenne-avx: build-mersenne-avx
+	$(CC) $(CFLAGS_AVX) $(TEST)/bench.c -L $(LIB) -lfft_mersenne_avx -o $(TEST)/bench_mersenne_avx $(LDFLAGS)
+	./$(TEST)/bench_mersenne_avx
+
 clean:
-	rm -rf $(OBJ) $(TEST)/test $(TEST)/test_scalar $(TEST)/bench $(TEST)/bench_scalar $(TEST)/bench_avx $(LIB)
+	rm -rf $(OBJ) $(TEST)/test $(TEST)/test_scalar $(TEST)/bench $(TEST)/bench_scalar $(TEST)/bench_avx $(TEST)/bench_mersenne $(LIB)

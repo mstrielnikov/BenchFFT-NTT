@@ -13,15 +13,67 @@ BenchFFT-NTT/
 │   │   ├── bigint.c       # Core BigUInt
 │   │   ├── fft_split.c    # FFT implementation
 │   │   ├── fft_split_avx.c # FFT with AVX intrinsics
-│   │   ├── ntt_mont.c    # NTT Montgomery
-│   │   └── ntt_mont_avx.c # NTT with AVX
+│   │   ├── ntt_mont.c     # NTT Montgomery (998244353)
+│   │   ├── ntt_mersenne.c # NTT Mersenne (2^61-1)
+│   │   └── ntt_mersenne_avx.c # NTT Mersenne + AVX
+│   └── test/
+│       ├── test.c          # Tests
+│       └── bench.c         # Benchmarks
+├── rust/                   # Rust implementation
+│   ├── Cargo.toml
+│   └── src/
+│       ├── lib.rs         # Module re-exports
+│       ├── bigint.rs      # BigUInt type
+│       ├── fft.rs         # Basic FFT
+│       ├── fft_avx.rs     # AVX-optimized FFT
+│       ├── ntt_mont.rs    # Montgomery NTT
+│       ├── ntt_mersenne.rs # Mersenne NTT
+│       └── main.rs        # Benchmark runner
+└── lean/                  # Lean4 formal verification (placeholder)
+    ├── Formal.lean
+    └── README.md
+```
+
+## Algorithm Implementations
+
+### C Modules
+
+| File | Description |
+|------|-------------|
+| `bigint.c` | Core BigUInt operations |
+| `fft_split.c` | Basic Cooley-Tukey FFT |
+| `fft_split_avx.c` | AVX2 vectorized FFT |
+| `ntt_mont.c` | Montgomery NTT (mod 998244353) |
+| `ntt_mersenne.c` | Mersenne NTT (mod 2^61-1) |
+| `ntt_mersenne_avx.c` | Mersenne NTT with AVX |
+
+### Rust Modules
+
+| File | Description |
+|------|-------------|
+| `bigint.rs` | BigUInt type definition |
+| `fft.rs` | Basic Cooley-Tukey FFT |
+| `fft_avx.rs` | AVX2 vectorized FFT |
+| `ntt_mont.rs` | Montgomery NTT (mod 998244353) |
+| `ntt_mersenne.rs` | Mersenne NTT (mod 2^61-1) |
+BenchFFT-NTT/
+├── c/                      # C implementation
+│   ├── Makefile
+│   ├── include/bigint.h   # Header
+│   ├── src/
+│   │   ├── bigint.c       # Core BigUInt
+│   │   ├── fft_split.c    # FFT implementation
+│   │   ├── fft_split_avx.c # FFT with AVX intrinsics
+│   │   ├── ntt_mont.c    # NTT Montgomery (998244353)
+│   │   ├── ntt_mersenne.c # NTT Mersenne (2^61-1)
+│   │   └── ntt_mersenne_avx.c # NTT Mersenne + AVX
 │   └── test/
 │       ├── test.c         # Tests
 │       └── bench.c        # Benchmarks
 ├── rust/                   # Rust implementation
 │   ├── Cargo.toml
 │   └── src/
-│       ├── lib.rs         # FFT/NTT + AVX implementations
+│       ├── lib.rs         # FFT/NTT + AVX + Mersenne implementations
 │       └── main.rs        # Benchmark runner
 └── lean/                  # Lean4 formal verification (placeholder)
     ├── Formal.lean
@@ -45,35 +97,22 @@ Convolution Theorem: FFT(a * b) = FFT(a) · FFT(b)
 
 ### Number Theoretic Transform (NTT)
 
-NTT is the FFT over a finite field instead of complex numbers. Uses primitive roots of unity in mod p.
+NTT is the FFT over a finite field instead of complex numbers. Two moduli are tested:
 
+#### Montgomery (998244353)
 - **Modulus**: 998244353 (2^23 * 7 * 17 + 1)
 - **Primitive Root**: 3
+- Standard NTT using modular arithmetic with `%` operator
 
-Advantages:
-- No floating-point rounding errors
-- Exact integer arithmetic
-- Constant-time operations (no floating-point variance)
+#### Mersenne (2^61 - 1)
+- **Modulus**: 2305843009213693951 (2^61 - 1)
+- **Reduction**: Uses shift-and-add instead of division
+- **Formula**: `x mod M61 = (x & M61) + (x >> 61)`
 
-## Math Background
-
-### Polynomial Multiplication
-
-Given polynomials A(x) and B(x) of degree n-1:
-- A(x) = Σ aᵢxⁱ, B(x) = Σ bᵢxⁱ
-
-The product C(x) = A(x)·B(x) has coefficients:
-- cₖ = Σ aᵢbₖ₋ᵢ for i from 0 to k
-
-This is the convolution of coefficient vectors.
-
-### Complexity
-
-| Algorithm | Complexity | Notes |
-|----------|------------|-------|
-| Naive    | O(n²)     | Direct coefficient multiplication |
-| FFT      | O(n log n) | Uses complex roots of unity |
-| NTT      | O(n log n) | Finite field variant of FFT |
+Advantages of Mersenne:
+- No expensive division operations
+- Uses simple bit shifts
+- ~3-5x faster than Montgomery
 
 ## Building
 
@@ -87,19 +126,23 @@ make build-scalar
 # Build AVX intrinsics version
 make build-avx
 
+# Build Mersenne NTT version
+make build-mersenne
+
+# Build Mersenne + AVX version
+make build-mersenne-avx
+
 # Run C tests
 make test
 
-# Run C benchmarks (auto-vectorized)
-make bench
+# Run C benchmarks
+make bench              # Auto-vectorized
+make bench-scalar       # No vectorization
+make bench-avx          # AVX intrinsics
+make bench-mersenne     # Mersenne NTT
+make bench-mersenne-avx # Mersenne + AVX
 
-# Run C scalar benchmarks
-make bench-scalar
-
-# Run C AVX benchmarks
-make bench-avx
-
-# Build and run Rust benchmarks (with AVX intrinsics)
+# Build and run Rust benchmarks
 cd rust && RUSTFLAGS="-C target-cpu=native" cargo build --release
 ./rust/target/release/bench
 
@@ -112,90 +155,104 @@ make clean
 
 ## Benchmark Results
 
-Tested on vector sizes matching PQC algorithms (ML-KEM, ML-DSA). Three C build configurations:
+All times in milliseconds. Lower is better.
 
-1. **Scalar**: No vectorization (`-fno-tree-vectorize`)
-2. **Auto-vectorized**: Compiler vectorizes with AVX/FMA (`-mavx2 -mfma -funroll-loops`)
-3. **AVX Intrinsics**: Manual AVX2 intrinsics in C code
+### FFT Comparison (C Auto-Vectorized vs AVX Intrinsics)
 
-### Scalar (No Vectorization)
+| Size | Auto-Vec FFT | AVX FFT | Speedup |
+|------|--------------|---------|---------|
+| 256  | 6.34 ms | 3.87 ms | 1.6x |
+| 512  | 3.99 ms | 2.80 ms | 1.4x |
+| 1024 | 3.55 ms | 2.42 ms | 1.5x |
+| 2048 | 3.96 ms | 2.71 ms | 1.5x |
+| 4096 | 2.96 ms | 2.11 ms | 1.4x |
 
-| Size | Type | FFT | NTT |
-|------|------|-----|-----|
-| 256  | ML-KEM-512 | 3.92 ms | 12.20 ms |
-| 512  | ML-KEM-768 | 4.32 ms | 13.83 ms |
-| 1024 | ML-KEM-1024 | 3.81 ms | 10.37 ms |
-| 2048 | ML-DSA | 4.26 ms | 10.94 ms |
-| 3072 | Extended | 6.46 ms | 11.93 ms |
-| 4096 | Extended | 3.06 ms | 7.10 ms |
+### NTT Comparison - Montgomery vs Mersenne (C)
 
-### Auto-Vectorized (Compiler AVX/FMA)
+| Size | Mont (998244353) | Mersenne | Speedup |
+|------|------------------|----------|---------|
+| 256  | 15.03 ms | 5.01 ms | **3.0x** |
+| 512  | 12.40 ms | 3.21 ms | **3.9x** |
+| 1024 | 10.41 ms | 2.68 ms | **3.9x** |
+| 2048 | 10.98 ms | 3.33 ms | **3.3x** |
+| 4096 | 7.04 ms | 1.65 ms | **4.3x** |
 
-| Size | Type | FFT | NTT |
-|------|------|-----|-----|
-| 256  | ML-KEM-512 | 5.49 ms | 12.79 ms |
-| 512  | ML-KEM-768 | 4.09 ms | 12.56 ms |
-| 1024 | ML-KEM-1024 | 3.63 ms | 10.63 ms |
-| 2048 | ML-DSA | 4.50 ms | 11.09 ms |
-| 3072 | Extended | 6.56 ms | 11.54 ms |
-| 4096 | Extended | 2.90 ms | 6.86 ms |
+### C: All Configurations
 
-### AVX Intrinsics (Manual)
+| Size | FFT-AVX | NTT-Mont | NTT-Mersenne | NTT-Mersenne+AVX |
+|------|---------|----------|--------------|-------------------|
+| 256  | 3.87 ms | 15.03 ms | 5.01 ms | **4.41 ms** |
+| 512  | 2.80 ms | 12.40 ms | 3.21 ms | **2.80 ms** |
+| 1024 | 2.42 ms | 10.41 ms | 2.68 ms | **2.51 ms** |
+| 2048 | 2.71 ms | 10.98 ms | 3.33 ms | **2.51 ms** |
+| 4096 | 2.11 ms | 7.04 ms | 1.65 ms | **1.57 ms** |
 
-| Size | Type | FFT | NTT |
-|------|------|-----|-----|
-| 256  | ML-KEM-512 | 4.57 ms | 13.51 ms |
-| 512  | ML-KEM-768 | 2.81 ms | 12.39 ms |
-| 1024 | ML-KEM-1024 | 2.34 ms | 10.36 ms |
-| 2048 | ML-DSA | 2.63 ms | 10.92 ms |
-| 3072 | Extended | 4.91 ms | 15.24 ms |
-| 4096 | Extended | 2.15 ms | 7.25 ms |
+### Rust vs C Comparison
 
-### Comparison: C vs Rust (All with AVX)
+| Size | C FFT | Rust FFT | C NTT-Mont | Rust NTT-Mont | C NTT-Mersenne | Rust NTT-Mersenne |
+|------|-------|----------|------------|---------------|----------------|-------------------|
+| 256  | 3.87 ms | 5.49 ms | 15.03 ms | 19.31 ms | 5.01 ms | 6.15 ms |
+| 512  | 2.80 ms | 3.03 ms | 12.40 ms | 19.01 ms | 3.21 ms | 6.51 ms |
+| 1024 | 2.42 ms | 2.79 ms | 10.41 ms | 16.43 ms | 2.68 ms | 5.12 ms |
+| 2048 | 2.71 ms | 4.35 ms | 10.98 ms | 18.66 ms | 3.33 ms | 5.50 ms |
+| 4096 | 2.11 ms | 2.71 ms | 7.04 ms | 11.66 ms | 1.65 ms | 3.60 ms |
 
-| Size | Type | C FFT | C NTT | Rust FFT (AVX) | Rust NTT (AVX) |
-|------|------|-------|-------|----------------|----------------|
-| 256  | ML-KEM-512 | 2.63 ms | 12.05 ms | 5.25 ms | 19.90 ms |
-| 512  | ML-KEM-768 | 2.70 ms | 12.27 ms | 3.34 ms | 18.86 ms |
-| 1024 | ML-KEM-1024 | 2.28 ms | 10.77 ms | 2.50 ms | 16.87 ms |
-| 2048 | ML-DSA | 3.33 ms | 11.14 ms | 4.61 ms | 18.11 ms |
-| 3072 | Extended | 4.74 ms | 14.25 ms | 4.15 ms | 19.17 ms |
-| 4096 | Extended | 2.11 ms | 6.90 ms | 2.41 ms | 11.34 ms |
+## Performance Rankings
 
-### Key Observations
+### Best NTT Implementation (C)
 
-- **C vs Rust AVX**: C is ~2x faster for FFT and ~1.5x faster for NTT
-- **FFT**: Power-of-two sizes (1024, 4096) show best performance
-- **AVX Intrinsics**: 30-40% faster than auto-vectorized for FFT at 512-1024 sizes
-- **C vs Rust**: C FFT and Rust FFT are very close (~10% difference); C NTT is ~35-40% faster than Rust NTT
-- **NTT overhead**: Higher than FFT due to modular multiplication
+| Rank | Implementation | 1024 words | 4096 words |
+|------|---------------|------------|------------|
+| 1 | C Mersenne+AVX | 2.51 ms | 1.57 ms |
+| 2 | C Mersenne | 2.68 ms | 1.65 ms |
+| 3 | C AVX-Montgomery | 10.36 ms | 7.25 ms |
+| 4 | C Auto-Montgomery | 10.41 ms | 7.04 ms |
+
+### Best FFT Implementation (C)
+
+| Rank | Implementation | 1024 words | 4096 words |
+|------|---------------|------------|------------|
+| 1 | C AVX Intrinsics | 2.42 ms | 2.11 ms |
+| 2 | C Auto-vectorized | 3.55 ms | 2.96 ms |
+| 3 | C Scalar | 3.81 ms | 3.06 ms |
+
+### C vs Rust (Same Algorithm)
+
+| Operation | C | Rust | C Advantage |
+|-----------|---|------|-------------|
+| FFT AVX (1024) | 2.42 ms | 2.79 ms | 1.15x |
+| NTT Mersenne (1024) | 2.68 ms | 5.12 ms | 1.91x |
+| NTT Mersenne (4096) | 1.65 ms | 3.60 ms | 2.18x |
+
+## Key Findings
+
+1. **Mersenne > Montgomery**: 3-5x faster due to shift-add reduction instead of division
+2. **AVX Intrinsics**: 30-40% improvement for FFT over auto-vectorization
+3. **C > Rust**: C is 1.5-2x faster even with same algorithm
+4. **Power-of-two advantage**: FFT/NTT perform best at 1024, 4096 (aligned with PQC sizes)
 
 ## Fair Comparison Notes
 
-To ensure a fair comparison between C and Rust implementations:
-
 ### Memory Management Alignment
 
-Both implementations now use pre-allocated vectors with exact expected sizes:
-
-1. **Input vectors**: Pre-allocated to size `n` (next power of 2)
-2. **Result vector**: Pre-allocated to `result_len = a->len + b->len - 1`
-3. **No incremental reallocation**: Results are written to pre-allocated buffers
-
-This eliminates memory allocation as a variable factor in benchmarks.
+Both implementations use pre-allocated vectors with exact expected sizes:
+- Input vectors: Pre-allocated to size `n` (next power of 2)
+- Result vector: Pre-allocated to `a->len + b->len - 1`
+- No incremental reallocation during computation
 
 ### Compilation Flags
 
 - **C Scalar**: `-O3 -std=c11 -fno-tree-vectorize`
 - **C Auto-vectorized**: `-O3 -std=c11 -mavx2 -mfma -funroll-loops`
 - **C AVX Intrinsics**: `-O3 -std=c11 -mavx2 -mfma -funroll-loops -DBUILD_AVX`
-- **Rust**: `--release` (equivalent to `-O3`)
+- **Rust**: `--release -C target-cpu=native`
 
 ### Remaining Differences
 
-- **FFT**: Uses `double` in C vs Rust (floating-point behavior identical)
-- **NTT**: C uses inline modular arithmetic; Rust uses wrapper functions
-- **Rust Vec vs C arrays**: Minor overhead in Rust's bounds checking (optimized out in release)
+- **FFT**: Uses `double` in both C and Rust
+- **NTT Montgomery**: C uses inline `%` operator; Rust uses wrapper functions
+- **NTT Mersenne**: Both use shift-add reduction
+- **Rust Vec vs C arrays**: Bounds checking optimized out in release
 
 ## Testing
 
