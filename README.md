@@ -12,7 +12,9 @@ BenchFFT-NTT/
 │   ├── src/
 │   │   ├── bigint.c       # Core BigUInt
 │   │   ├── fft_split.c    # FFT implementation
-│   │   └── ntt_mont.c    # NTT Montgomery
+│   │   ├── fft_split_avx.c # FFT with AVX intrinsics
+│   │   ├── ntt_mont.c    # NTT Montgomery
+│   │   └── ntt_mont_avx.c # NTT with AVX
 │   └── test/
 │       ├── test.c         # Tests
 │       └── bench.c        # Benchmarks
@@ -76,14 +78,26 @@ This is the convolution of coefficient vectors.
 ## Building
 
 ```bash
-# Build C library
+# Build C library (auto-vectorized with AVX/FMA)
 make build
+
+# Build scalar version (no vectorization)
+make build-scalar
+
+# Build AVX intrinsics version
+make build-avx
 
 # Run C tests
 make test
 
 # Run C benchmarks
 make bench
+
+# Run C scalar benchmarks
+make bench-scalar
+
+# Run C AVX benchmarks
+make bench-avx
 
 # Build and run Rust benchmarks
 make bench-rust
@@ -97,20 +111,60 @@ make clean
 
 ## Benchmark Results
 
-Tested on vector sizes matching PQC algorithms (ML-KEM, ML-DSA):
+Tested on vector sizes matching PQC algorithms (ML-KEM, ML-DSA). Three C build configurations:
+
+1. **Scalar**: No vectorization (`-fno-tree-vectorize`)
+2. **Auto-vectorized**: Compiler vectorizes with AVX/FMA (`-mavx2 -mfma -funroll-loops`)
+3. **AVX Intrinsics**: Manual AVX2 intrinsics in C code
+
+### Scalar (No Vectorization)
+
+| Size | Type | FFT | NTT |
+|------|------|-----|-----|
+| 256  | ML-KEM-512 | 3.92 ms | 12.20 ms |
+| 512  | ML-KEM-768 | 4.32 ms | 13.83 ms |
+| 1024 | ML-KEM-1024 | 3.81 ms | 10.37 ms |
+| 2048 | ML-DSA | 4.26 ms | 10.94 ms |
+| 3072 | Extended | 6.46 ms | 11.93 ms |
+| 4096 | Extended | 3.06 ms | 7.10 ms |
+
+### Auto-Vectorized (Compiler AVX/FMA)
+
+| Size | Type | FFT | NTT |
+|------|------|-----|-----|
+| 256  | ML-KEM-512 | 5.49 ms | 12.79 ms |
+| 512  | ML-KEM-768 | 4.09 ms | 12.56 ms |
+| 1024 | ML-KEM-1024 | 3.63 ms | 10.63 ms |
+| 2048 | ML-DSA | 4.50 ms | 11.09 ms |
+| 3072 | Extended | 6.56 ms | 11.54 ms |
+| 4096 | Extended | 2.90 ms | 6.86 ms |
+
+### AVX Intrinsics (Manual)
+
+| Size | Type | FFT | NTT |
+|------|------|-----|-----|
+| 256  | ML-KEM-512 | 4.57 ms | 13.51 ms |
+| 512  | ML-KEM-768 | 2.81 ms | 12.39 ms |
+| 1024 | ML-KEM-1024 | 2.34 ms | 10.36 ms |
+| 2048 | ML-DSA | 2.63 ms | 10.92 ms |
+| 3072 | Extended | 4.91 ms | 15.24 ms |
+| 4096 | Extended | 2.15 ms | 7.25 ms |
+
+### Comparison: C vs Rust
 
 | Size | Type | C FFT | C NTT | Rust FFT | Rust NTT |
 |------|------|-------|-------|----------|----------|
-| 256  | ML-KEM-512 | 6.0 ms | 13.3 ms | 6.3 ms | 20.8 ms |
-| 512  | ML-KEM-768 | 4.2 ms | 12.4 ms | 4.4 ms | 18.7 ms |
-| 1024 | ML-KEM-1024 | 3.6 ms | 10.8 ms | 3.9 ms | 16.3 ms |
-| 2048 | ML-DSA | 4.1 ms | 11.0 ms | 4.6 ms | 17.6 ms |
-| 3072 | Extended | 5.9 ms | 12.8 ms | 5.5 ms | 18.7 ms |
-| 4096 | Extended | 4.4 ms | 7.3 ms | 3.3 ms | 11.6 ms |
+| 256  | ML-KEM-512 | 5.49 ms | 12.79 ms | 6.3 ms | 20.8 ms |
+| 512  | ML-KEM-768 | 4.09 ms | 12.56 ms | 4.4 ms | 18.7 ms |
+| 1024 | ML-KEM-1024 | 3.63 ms | 10.63 ms | 3.9 ms | 16.3 ms |
+| 2048 | ML-DSA | 4.50 ms | 11.09 ms | 4.6 ms | 17.6 ms |
+| 3072 | Extended | 6.56 ms | 11.54 ms | 5.5 ms | 18.7 ms |
+| 4096 | Extended | 2.90 ms | 6.86 ms | 3.3 ms | 11.6 ms |
 
 ### Key Observations
 
 - **FFT**: Power-of-two sizes (1024, 4096) show best performance
+- **AVX Intrinsics**: 30-40% faster than auto-vectorized for FFT at 512-1024 sizes
 - **C vs Rust**: C FFT and Rust FFT are very close (~10% difference); C NTT is ~35-40% faster than Rust NTT
 - **NTT overhead**: Higher than FFT due to modular multiplication
 
@@ -130,7 +184,9 @@ This eliminates memory allocation as a variable factor in benchmarks.
 
 ### Compilation Flags
 
-- **C**: `-O3 -std=c11`
+- **C Scalar**: `-O3 -std=c11 -fno-tree-vectorize`
+- **C Auto-vectorized**: `-O3 -std=c11 -mavx2 -mfma -funroll-loops`
+- **C AVX Intrinsics**: `-O3 -std=c11 -mavx2 -mfma -funroll-loops -DBUILD_AVX`
 - **Rust**: `--release` (equivalent to `-O3`)
 
 ### Remaining Differences
