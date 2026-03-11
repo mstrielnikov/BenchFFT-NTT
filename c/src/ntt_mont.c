@@ -72,7 +72,9 @@ BigUInt *biguint_mul_ntt_mont(const BigUInt *a, const BigUInt *b) {
     
     size_t n = 1;
     while (n < a->len + b->len - 1) n <<= 1;
+    size_t result_len = a->len + b->len - 1;
     
+    // Pre-allocate all vectors upfront (like Rust)
     uint64_t *fa = calloc(n, sizeof(uint64_t));
     uint64_t *fb = calloc(n, sizeof(uint64_t));
     
@@ -81,30 +83,43 @@ BigUInt *biguint_mul_ntt_mont(const BigUInt *a, const BigUInt *b) {
         return NULL;
     }
     
+    // Copy input words (modulo MOD)
     for (size_t i = 0; i < a->len; i++) fa[i] = a->words[i] % MOD;
     for (size_t i = 0; i < b->len; i++) fb[i] = b->words[i] % MOD;
     
+    // NTT forward
     ntt_inplace(fa, n, MOD, ROOT, false);
     ntt_inplace(fb, n, MOD, ROOT, false);
     
+    // Pointwise multiply
     for (size_t i = 0; i < n; i++) {
         fa[i] = mod_mul(fa[i], fb[i], MOD);
     }
     
+    // Inverse NTT
     ntt_inplace(fa, n, MOD, ROOT, true);
     
+    // Pre-allocate result with exact size (like Rust Vec::with_capacity)
     BigUInt *res = biguint_new();
     if (!res) {
         free(fa); free(fb);
         return NULL;
     }
     
-    for (size_t i = 0; i < n; i++) {
-        res->words = realloc(res->words, (i + 1) * sizeof(uint64_t));
-        res->words[i] = fa[i];
-        res->len = i + 1;
+    // Pre-allocate result words array
+    res->words = calloc(result_len, sizeof(uint64_t));
+    if (!res->words) {
+        free(fa); free(fb);
+        free(res);
+        return NULL;
     }
-    res->cap = n;
+    
+    // Copy result (only up to result_len)
+    for (size_t i = 0; i < result_len; i++) {
+        res->words[i] = fa[i];
+    }
+    res->len = result_len;
+    res->cap = result_len;
     
     free(fa); free(fb);
     biguint_normalize(res);

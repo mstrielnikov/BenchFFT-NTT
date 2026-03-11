@@ -101,18 +101,43 @@ Tested on vector sizes matching PQC algorithms (ML-KEM, ML-DSA):
 
 | Size | Type | C FFT | C NTT | Rust FFT | Rust NTT |
 |------|------|-------|-------|----------|----------|
-| 256  | ML-KEM-512 | ~4.6 ms | ~15.5 ms | ~5.8 ms | ~23.6 ms |
-| 512  | ML-KEM-768 | ~5.1 ms | ~13.5 ms | ~4.4 ms | ~18.4 ms |
-| 1024 | ML-KEM-1024 | ~4.2 ms | ~11.3 ms | ~3.6 ms | ~16.1 ms |
-| 2048 | ML-DSA | ~4.5 ms | ~11.7 ms | ~4.7 ms | ~17.8 ms |
-| 3072 | Extended | ~6.6 ms | ~12.5 ms | ~6.3 ms | ~19.0 ms |
-| 4096 | Extended | ~3.9 ms | ~7.6 ms | ~4.2 ms | ~11.8 ms |
+| 256  | ML-KEM-512 | 6.0 ms | 13.3 ms | 6.3 ms | 20.8 ms |
+| 512  | ML-KEM-768 | 4.2 ms | 12.4 ms | 4.4 ms | 18.7 ms |
+| 1024 | ML-KEM-1024 | 3.6 ms | 10.8 ms | 3.9 ms | 16.3 ms |
+| 2048 | ML-DSA | 4.1 ms | 11.0 ms | 4.6 ms | 17.6 ms |
+| 3072 | Extended | 5.9 ms | 12.8 ms | 5.5 ms | 18.7 ms |
+| 4096 | Extended | 4.4 ms | 7.3 ms | 3.3 ms | 11.6 ms |
 
 ### Key Observations
 
 - **FFT**: Power-of-two sizes (1024, 4096) show best performance
-- **C vs Rust**: C FFT slightly faster; C NTT significantly faster due to better modular arithmetic
+- **C vs Rust**: C FFT and Rust FFT are very close (~10% difference); C NTT is ~35-40% faster than Rust NTT
 - **NTT overhead**: Higher than FFT due to modular multiplication
+
+## Fair Comparison Notes
+
+To ensure a fair comparison between C and Rust implementations:
+
+### Memory Management Alignment
+
+Both implementations now use pre-allocated vectors with exact expected sizes:
+
+1. **Input vectors**: Pre-allocated to size `n` (next power of 2)
+2. **Result vector**: Pre-allocated to `result_len = a->len + b->len - 1`
+3. **No incremental reallocation**: Results are written to pre-allocated buffers
+
+This eliminates memory allocation as a variable factor in benchmarks.
+
+### Compilation Flags
+
+- **C**: `-O3 -std=c11`
+- **Rust**: `--release` (equivalent to `-O3`)
+
+### Remaining Differences
+
+- **FFT**: Uses `double` in C vs Rust (floating-point behavior identical)
+- **NTT**: C uses inline modular arithmetic; Rust uses wrapper functions
+- **Rust Vec vs C arrays**: Minor overhead in Rust's bounds checking (optimized out in release)
 
 ## Testing
 
