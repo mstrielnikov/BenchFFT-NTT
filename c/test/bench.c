@@ -7,44 +7,75 @@ static double time_ms(clock_t start, clock_t end) {
     return (double)(end - start) * 1000.0 / CLOCKS_PER_SEC;
 }
 
-int main() {
-    printf("========== BENCHMARKS ==========\n\n");
-    
-    srand(42);
-    
-    printf("=== MUL FFT variants (256 words) ===\n");
-    
-    uint64_t *words1 = malloc(256 * sizeof(uint64_t));
-    uint64_t *words2 = malloc(256 * sizeof(uint64_t));
-    for (int i = 0; i < 256; i++) {
+void run_benchmark(const char *name, size_t size, int iterations) {
+    uint64_t *words1 = malloc(size * sizeof(uint64_t));
+    uint64_t *words2 = malloc(size * sizeof(uint64_t));
+    for (size_t i = 0; i < size; i++) {
         words1[i] = ((uint64_t)rand() << 32) | rand();
         words2[i] = ((uint64_t)rand() << 32) | rand();
     }
     
-    BigUInt *a = biguint_from_slice(words1, 256);
-    BigUInt *b = biguint_from_slice(words2, 256);
+    BigUInt *a = biguint_from_slice(words1, size);
+    BigUInt *b = biguint_from_slice(words2, size);
     free(words1);
     free(words2);
     
+    // FFT Benchmark
     clock_t start = clock();
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < iterations; i++) {
         BigUInt *c = biguint_mul_fft_split(a, b);
         biguint_free(c);
     }
     clock_t end = clock();
-    printf("mul (FFT Split, 256):              %.4f ms (100 iters)\n", time_ms(start, end));
+    printf("FFT %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
     
+    // NTT Benchmark
     start = clock();
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < iterations; i++) {
         BigUInt *c = biguint_mul_ntt_mont(a, b);
         biguint_free(c);
     }
     end = clock();
-    printf("mul (NTT Montgomery, 256):         %.4f ms (100 iters)\n", time_ms(start, end));
+    printf("NTT %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
     
     biguint_free(a);
     biguint_free(b);
+}
+
+int main() {
+    printf("========== BENCHMARKS ==========\n\n");
+    printf("ML-KEM / ML-DSA Vector Sizes\n");
+    printf("=============================\n\n");
     
-    printf("\n================================\n");
+    srand(42);
+    
+    // ML-KEM sizes (k = 2,3,4)
+    printf("ML-KEM-512 (256 words):\n");
+    run_benchmark("FFT", 256, 100);
+    printf("\n");
+    
+    printf("ML-KEM-768 (512 words):\n");
+    run_benchmark("FFT", 512, 50);
+    printf("\n");
+    
+    printf("ML-KEM-1024 (1024 words):\n");
+    run_benchmark("FFT", 1024, 20);
+    printf("\n");
+    
+    // ML-DSA sizes
+    printf("ML-DSA (2048 words):\n");
+    run_benchmark("FFT", 2048, 10);
+    printf("\n");
+    
+    // Extended sizes
+    printf("Extended (3072 words):\n");
+    run_benchmark("FFT", 3072, 5);
+    printf("\n");
+    
+    printf("Extended (4096 words):\n");
+    run_benchmark("FFT", 4096, 3);
+    printf("\n");
+    
+    printf("================================\n");
     return 0;
 }
