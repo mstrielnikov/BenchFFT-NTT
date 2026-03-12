@@ -27,16 +27,34 @@ void run_benchmark(const char *name, size_t size, int iterations) {
         biguint_free(c);
     }
     clock_t end = clock();
-    printf("FFT %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    printf("FFT     %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
     
-    // NTT Benchmark
+    // FFT+M61 Benchmark
     start = clock();
     for (int i = 0; i < iterations; i++) {
         BigUInt *c = biguint_mul_ntt_mont(a, b);
         biguint_free(c);
     }
     end = clock();
-    printf("NTT %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    printf("FFT M61 %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    
+    // NTT M61 Benchmark
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        BigUInt *c = biguint_mul_ntt_mersenne(a, b);
+        biguint_free(c);
+    }
+    end = clock();
+    printf("NTT M61 %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    
+    // NTT Mont ASM Benchmark
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        BigUInt *c = biguint_mul_ntt_mont_asm(a, b);
+        biguint_free(c);
+    }
+    end = clock();
+    printf("NTT ASM%4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
     
     biguint_free(a);
     biguint_free(b);

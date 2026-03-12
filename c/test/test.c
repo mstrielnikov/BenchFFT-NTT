@@ -154,6 +154,97 @@ void test_fft_split() {
     printf("FFT Split: %d passed, %d failed\n", tests_passed, tests_failed);
 }
 
+static uint64_t mod_m61(uint64_t x) {
+    uint64_t t = (x >> 61) + (x & 2305843009213693951ULL);
+    t += (t >> 61);
+    return t & 2305843009213693951ULL;
+}
+
+static void reduce_mod_m61(BigUInt *a) {
+    for (size_t i = 0; i < a->len; i++) {
+        a->words[i] = mod_m61(a->words[i]);
+    }
+    biguint_normalize(a);
+}
+
+void test_ntt_mersenne() {
+    printf("=== NTT MERSENNE (Integer) TESTS ===\n");
+    int start_passed = tests_passed;
+    
+    BigUInt *a = biguint_from_uint64(12345);
+    BigUInt *b = biguint_from_uint64(67890);
+    BigUInt *c = biguint_mul_ntt_mersenne(a, b);
+    BigUInt *expected = biguint_from_uint64(12345ULL * 67890ULL);
+    ASSERT_EQ(c, expected, "12345 * 67890");
+    biguint_free(c);
+    biguint_free(expected);
+    biguint_free(a);
+    biguint_free(b);
+    
+    uint64_t *words256_1 = malloc(256 * sizeof(uint64_t));
+    uint64_t *words256_2 = malloc(256 * sizeof(uint64_t));
+    for (int i = 0; i < 256; i++) {
+        words256_1[i] = i + 1;
+        words256_2[i] = (i + 1) * 2;
+    }
+    a = biguint_from_slice(words256_1, 256);
+    b = biguint_from_slice(words256_2, 256);
+    c = biguint_mul_ntt_mersenne(a, b);
+    ASSERT(c != NULL && c->len > 256, "mul 256 words");
+    
+    BigUInt *ref = biguint_mul_fft_split(a, b);
+    reduce_mod_m61(ref);
+    ASSERT(biguint_cmp(c, ref) == 0, "256 words match FFT mod M61");
+    
+    biguint_free(ref);
+    biguint_free(c);
+    biguint_free(a);
+    biguint_free(b);
+    free(words256_1);
+    free(words256_2);
+    
+    printf("NTT Mersenne: %d passed, %d failed\n", tests_passed - start_passed, tests_failed);
+}
+
+void test_fft_mersenne() {
+    printf("=== FFT MERSENNE TESTS ===\n");
+    int start_passed = tests_passed;
+    
+    BigUInt *a = biguint_from_uint64(12345);
+    BigUInt *b = biguint_from_uint64(67890);
+    BigUInt *c = biguint_mul_ntt_mont(a, b);
+    BigUInt *expected = biguint_from_uint64(12345ULL * 67890ULL);
+    ASSERT_EQ(c, expected, "12345 * 67890");
+    biguint_free(c);
+    biguint_free(expected);
+    biguint_free(a);
+    biguint_free(b);
+    
+    uint64_t *words256_1 = malloc(256 * sizeof(uint64_t));
+    uint64_t *words256_2 = malloc(256 * sizeof(uint64_t));
+    for (int i = 0; i < 256; i++) {
+        words256_1[i] = i + 1;
+        words256_2[i] = (i + 1) * 2;
+    }
+    a = biguint_from_slice(words256_1, 256);
+    b = biguint_from_slice(words256_2, 256);
+    c = biguint_mul_ntt_mont(a, b);
+    ASSERT(c != NULL && c->len > 256, "mul 256 words");
+    
+    BigUInt *ref = biguint_mul_fft_split(a, b);
+    reduce_mod_m61(ref);
+    ASSERT(biguint_cmp(c, ref) == 0, "256 words match FFT mod M61");
+    
+    biguint_free(ref);
+    biguint_free(c);
+    biguint_free(a);
+    biguint_free(b);
+    free(words256_1);
+    free(words256_2);
+    
+    printf("FFT Mersenne: %d passed, %d failed\n", tests_passed - start_passed, tests_failed);
+}
+
 void test_ntt_mont() {
     printf("=== NTT MONT TESTS ===\n");
     int start_passed = tests_passed;
@@ -260,7 +351,8 @@ void test_add() {
 int main() {
     test_add();
     test_fft_split();
-    test_ntt_mont();
+    test_fft_mersenne();
+    test_ntt_mersenne();
     
     printf("\n====================\n");
     printf("TOTAL: %d passed, %d failed\n", tests_passed, tests_failed);

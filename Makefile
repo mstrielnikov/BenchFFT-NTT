@@ -28,7 +28,7 @@ bench-rust:
 	cd rust && ./target/release/bench
 
 bench-all:
-	$(MAKE) -C c bench
+	$(MAKE) -C c bench-both
 	$(MAKE) bench-rust
 
 clean:

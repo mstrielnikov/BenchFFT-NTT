@@ -40,7 +40,9 @@ int biguint_cmp(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_add(const BigUInt *a, const BigUInt *b);
 
 BigUInt *biguint_mul_fft_split(const BigUInt *a, const BigUInt *b);
+BigUInt *biguint_mul_ntt_mersenne(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont(const BigUInt *a, const BigUInt *b);
+BigUInt *biguint_mul_ntt_mont_asm(const BigUInt *a, const BigUInt *b);
 
 #if defined(BUILD_SCHOOLBOOK)
 BigUInt *biguint_mul_schoolbook(const BigUInt *a, const BigUInt *b);

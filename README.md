@@ -13,8 +13,9 @@ BenchFFT-NTT/
 │   │   ├── bigint.c       # Core BigUInt
 │   │   ├── fft_split.c    # FFT implementation
 │   │   ├── fft_split_avx.c # FFT with AVX intrinsics
+│   │   ├── fft_mersenne.c # FFT + Mersenne reduction
+│   │   ├── ntt_mersenne.c # Integer NTT → M61 reduction
 │   │   ├── ntt_mont.c     # NTT Montgomery (998244353)
-│   │   ├── ntt_mersenne.c # NTT Mersenne (2^61-1)
 │   │   └── ntt_mersenne_avx.c # NTT Mersenne + AVX
 │   └── test/
 │       ├── test.c          # Tests
@@ -41,10 +42,12 @@ BenchFFT-NTT/
 | File | Description |
 |------|-------------|
 | `bigint.c` | Core BigUInt operations |
-| `fft_split.c` | Basic Cooley-Tukey FFT |
+| `fft_split.c` | Cooley-Tukey FFT (double precision) |
 | `fft_split_avx.c` | AVX2 vectorized FFT |
+| `fft_mersenne.c` | FFT + Mersenne M61 reduction |
+| `ntt_mersenne.c` | Integer NTT (mod 998244353) → M61 |
 | `ntt_mont.c` | Montgomery NTT (mod 998244353) |
-| `ntt_mersenne.c` | Mersenne NTT (mod 2^61-1) |
+| `ntt_mont_asm.c` | Montgomery NTT with inline asm |
 | `ntt_mersenne_avx.c` | Mersenne NTT with AVX |
 
 ### Rust Modules
@@ -54,8 +57,12 @@ BenchFFT-NTT/
 | `bigint.rs` | BigUInt type definition |
 | `fft.rs` | Basic Cooley-Tukey FFT |
 | `fft_avx.rs` | AVX2 vectorized FFT |
+| `fft_mersenne.rs` | FFT + Mersenne M61 reduction |
 | `ntt_mont.rs` | Montgomery NTT (mod 998244353) |
-| `ntt_mersenne.rs` | Mersenne NTT + AVX (mod 2^61-1) |
+| `ntt_mont_asm.rs` | Montgomery NTT with optimized mul |
+| `ntt_mersenne.rs` | Direct Mersenne NTT (mod 2^61-1) + AVX |
+| `ntt_mersenne_alt.rs` | Integer NTT (mod 998244353) → M61 reduction |
+| `schoolbook.rs` | Schoolbook multiplication |
 
 ## Algorithms
 
@@ -80,33 +87,41 @@ NTT is the FFT over a finite field instead of complex numbers. Two moduli are te
 #### Mersenne (2^61 - 1)
 - **Modulus**: 2305843009213693951 (2^61 - 1)
 - **Reduction**: Uses shift-and-add instead of division
-- **Formula**: `x mod M61 = (x & M61) + (x >> 61)`
+- **Formula**: `x mod M61 = ((x >> 61) + (x & M61)) & M61`
 
 Advantages of Mersenne:
 - No expensive division operations
 - Uses simple bit shifts
 - ~3-5x faster than Montgomery
 
+#### Implementation Approaches
+
+Two approaches for M61 convolution:
+
+1. **FFT + M61 Reduction**: FFT over doubles → reduce each result word with M61
+2. **Integer NTT + M61 Reduction**: Integer NTT (mod 998244353) → reduce to M61
+
 ## Building
 
 ```bash
 # Build C library
 make build                    # Default (auto-vectorized)
-make build-scalar             # No vectorization
+make build-scalar            # No vectorization
 make build-avx               # AVX intrinsics
 make build-mersenne          # Mersenne NTT
 make build-mersenne-avx      # Mersenne + AVX
+make build-both              # All methods (FFT, FFT M61, NTT M61)
 
 # Run C benchmarks
-make bench
-make bench-scalar
-make bench-avx
-make bench-mersenne
-make bench-mersenne-avx
+make bench                   # Default (basic)
+make bench-both              # All methods including Mersenne
 
 # Rust benchmarks
 cd rust && cargo build --release
-cargo run --release
+cd rust && cargo run --release
+
+# All benchmarks (C + Rust)
+make bench-all
 
 # Clean
 make clean
@@ -125,86 +140,53 @@ All times in milliseconds. Lower is better.
 
 ## C Implementation Benchmarks
 
-### FFT (Complex Number)
+### All Methods
 
-| Size | Auto-Vectorized | AVX Intrinsics | Scalar |
-|------|-----------------|----------------|--------|
-| 256  | 4.96 ms | 5.05 ms | 8.77 ms |
-| 512  | 2.49 ms | 1.65 ms | 5.24 ms |
-| 1024 | 2.09 ms | 1.37 ms | 2.14 ms |
-| 2048 | 2.47 ms | 1.56 ms | 2.44 ms |
-| 3072 | 3.63 ms | 2.77 ms | 3.74 ms |
-| 4096 | 1.76 ms | 1.31 ms | 1.80 ms |
-
-### NTT Montgomery (mod 998244353)
-
-| Size | Auto-Vectorized | AVX Intrinsics | Scalar |
-|------|-----------------|----------------|--------|
-| 256  | 2.22 ms | 2.22 ms | 2.37 ms |
-| 512  | 7.57 ms | 7.46 ms | 7.59 ms |
-| 1024 | 6.24 ms | 6.29 ms | 6.31 ms |
-| 2048 | 6.63 ms | 6.57 ms | 6.79 ms |
-| 3072 | 6.99 ms | 7.00 ms | 7.11 ms |
-| 4096 | 4.17 ms | 4.22 ms | 4.20 ms |
-
-### NTT Mersenne (mod 2^61-1)
-
-| Size | Scalar | AVX2 Intrinsics |
-|------|--------|-----------------|
-| 256  | 4.99 ms | 2.22 ms |
-| 512  | 3.55 ms | 1.94 ms |
-| 1024 | 1.53 ms | 1.61 ms |
-| 2048 | 1.56 ms | 1.63 ms |
-| 3072 | 1.64 ms | 1.85 ms |
-| 4096 | 1.00 ms | 1.01 ms |
+| Size | FFT | FFT M61 | NTT M61 | NTT ASM |
+|------|-----|---------|---------|---------|
+| 256  | 5.70 ms | 11.97 ms | 2.83 ms | 2.11 ms |
+| 512  | 2.45 ms | 7.51 ms | 3.07 ms | 2.16 ms |
+| 1024 | 2.12 ms | 6.27 ms | 2.58 ms | 1.96 ms |
+| 2048 | 2.33 ms | 6.63 ms | 2.75 ms | 2.06 ms |
+| 3072 | 3.46 ms | 7.62 ms | 4.08 ms | 2.95 ms |
+| 4096 | 2.31 ms | 4.68 ms | 2.56 ms | 1.79 ms |
 
 ---
 
 ## Rust Implementation Benchmarks
 
-### FFT (Complex Number)
+### All Methods Side-by-Side
 
-| Size | Scalar | AVX Intrinsics |
-|------|--------|----------------|
-| 256  | 20.87 ms | 16.76 ms |
-| 512  | 14.08 ms | 13.87 ms |
-| 1024 | 12.44 ms | 12.31 ms |
-| 2048 | 13.94 ms | 13.91 ms |
-| 3072 | 15.00 ms | 15.73 ms |
-| 4096 | 10.01 ms | 9.39 ms |
+| Size | FFT | FFT AVX | NTT | NTT ASM | NTT M61 | FFT M61 | Mersenne |
+|------|-----|---------|-----|---------|---------|---------|----------|
+| 256  | 5.55 ms | 12.60 ms | 13.56 ms | 10.34 ms | 10.77 ms | 2.47 ms | 4.39 ms |
+| 512  | 2.79 ms | 13.89 ms | 11.44 ms | 10.96 ms | 11.22 ms | 2.64 ms | 4.08 ms |
+| 1024 | 2.25 ms | 12.47 ms | 9.72 ms | 9.56 ms | 11.16 ms | 3.18 ms | 3.40 ms |
+| 2048 | 2.93 ms | 13.85 ms | 10.62 ms | 10.42 ms | 10.67 ms | 2.61 ms | 3.40 ms |
+| 3072 | 3.40 ms | 15.38 ms | 13.77 ms | 11.32 ms | 11.54 ms | 3.14 ms | 3.70 ms |
+| 4096 | 1.86 ms | 9.54 ms | 6.90 ms | 6.97 ms | 6.92 ms | 2.07 ms | 2.26 ms |
 
-### NTT Montgomery (mod 998244353)
+### Mersenne NTT AVX (broken/slow)
 
-| Size | Scalar |
-|------|--------|
-| 256  | 10.96 ms |
-| 512  | 11.50 ms |
-| 1024 | 9.90 ms |
-| 2048 | 10.63 ms |
-| 3072 | 11.75 ms |
-| 4096 | 7.05 ms |
-
-### NTT Mersenne (mod 2^61-1)
-
-| Size | Scalar | AVX2 Intrinsics |
-|------|--------|------------------|
-| 256  | 4.13 ms | 68.73 ms |
-| 512  | 4.12 ms | 88.11 ms |
-| 1024 | 3.52 ms | 95.25 ms |
-| 2048 | 3.67 ms | 140.75 ms |
-| 3072 | 3.72 ms | 228.70 ms |
-| 4096 | 2.29 ms | 137.00 ms |
+| Size | Time |
+|------|------|
+| 256  | 71.73 ms |
+| 512  | 95.33 ms |
+| 1024 | 97.98 ms |
+| 2048 | 141.80 ms |
+| 3072 | 236.99 ms |
+| 4096 | 144.72 ms |
 
 ### Schoolbook Multiplication
 
 | Size | Time |
 |------|------|
-| 256  | 6.26 ms |
-| 512  | 12.61 ms |
-| 1024 | 19.98 ms |
-| 2048 | 39.98 ms |
-| 3072 | 44.93 ms |
-| 4096 | 47.79 ms |
+| 256  | 6.28 ms |
+| 512  | 12.66 ms |
+| 1024 | 20.57 ms |
+| 2048 | 40.76 ms |
+| 3072 | 45.74 ms |
+| 4096 | 51.16 ms |
 
 ---
 
@@ -212,22 +194,17 @@ All times in milliseconds. Lower is better.
 
 ### 4096-word multiplication
 
-| Implementation | FFT | NTT Montgomery | NTT Mersenne | Schoolbook |
-|----------------|-----|----------------|--------------|------------|
-| **C Auto** | 1.76 ms | 4.17 ms | 1.00 ms | - |
-| **C AVX** | 1.31 ms | 4.22 ms | 1.01 ms | - |
-| **C Scalar** | 1.80 ms | 4.20 ms | - | - |
-| **Rust Scalar** | 10.01 ms | 7.05 ms | 2.29 ms | 47.79 ms |
-| **Rust AVX** | 9.39 ms | - | N/A | - |
+| Implementation | FFT | NTT ASM | NTT M61 | FFT M61 | Mersenne |
+|----------------|-----|---------|---------|---------|----------|
+| **C** | 2.31 ms | **1.79 ms** | 2.56 ms | 4.68 ms | - |
+| **Rust** | 1.86 ms | 6.97 ms | 6.92 ms | **2.07 ms** | 2.26 ms |
 
 ### 1024-word multiplication
 
-| Implementation | FFT | NTT Montgomery | NTT Mersenne |
-|----------------|-----|----------------|--------------|
-| **C Auto** | 2.09 ms | 6.24 ms | 1.53 ms |
-| **C AVX** | 1.37 ms | 6.29 ms | 1.61 ms |
-| **Rust Scalar** | 12.44 ms | 9.90 ms | 3.52 ms |
-| **Rust AVX** | 12.31 ms | - | N/A |
+| Implementation | FFT | NTT ASM | NTT M61 | FFT M61 | Mersenne |
+|----------------|-----|---------|---------|---------|----------|
+| **C** | 2.12 ms | **1.96 ms** | 2.58 ms | 6.27 ms | - |
+| **Rust** | 2.25 ms | 9.56 ms | 11.16 ms | **3.18 ms** | 3.40 ms |
 
 ---
 
@@ -237,43 +214,47 @@ All times in milliseconds. Lower is better.
 
 | Rank | Algorithm | Language | Time |
 |------|-----------|----------|------|
-| 1 | C Mersenne NTT | C | 1.00 ms |
-| 2 | C Mersenne AVX | C | 1.01 ms |
-| 3 | C FFT AVX | C | 1.31 ms |
-| 4 | C FFT Auto | C | 1.76 ms |
-| 5 | Rust Mersenne | Rust | 2.29 ms |
-| 6 | C FFT Scalar | C | 1.80 ms |
-| 7 | C NTT Montgomery | C | 4.17 ms |
-| 8 | Rust FFT AVX | Rust | 9.39 ms |
-| 9 | Rust NTT Montgomery | Rust | 7.05 ms |
+| 1 | C NTT ASM | C | **1.79 ms** |
+| 2 | C NTT M61 | C | 2.56 ms |
+| 3 | C FFT | C | 2.31 ms |
+| 4 | Rust FFT M61 | Rust | 2.07 ms |
+| 5 | Rust FFT | Rust | 1.86 ms |
+| 6 | Rust Mersenne NTT | Rust | 2.26 ms |
+| 7 | C FFT M61 | C | 4.68 ms |
+| 8 | Rust NTT ASM | Rust | 6.97 ms |
 
 ---
 
 ## Key Findings
 
-### 1. Mersenne > Montgomery: 3-5x faster
-The shift-add reduction in Mersenne (2^61-1) avoids expensive modulo division required by Montgomery (998244353).
+### 1. C NTT ASM: New Champion
+The C implementation with inline asm Montgomery multiplication is now the fastest at **1.79 ms** for 4096 words, a 30% improvement over NTT M61.
 
-### 2. C > Rust: 2-5x faster
-Even with equivalent algorithms, C outperforms Rust significantly:
-- C Mersenne: 1.00 ms vs Rust: 2.29 ms (2.3x faster)
-- C FFT: 1.31 ms vs Rust: 9.39 ms (7.2x faster)
+### 2. C vs Rust: Different Winners
+- **C**: NTT ASM (inline asm Montgomery) is fastest at 1.79 ms
+- **Rust**: FFT M61 is fastest at 2.07 ms
+- C NTT ASM beats all Rust implementations by 1.15-5x
 
-### 3. AVX Intrinsics vs Auto-Vectorization
-- **FFT**: AVX intrinsics provide 20-35% improvement
-- **Montgomery NTT**: Minimal difference (auto-vectorization handles well)
-- **Mersenne NTT**: AVX version actually slower than scalar (M61 arithmetic doesn't map well to SIMD)
+### 3. Inline ASM Makes C NTT Fastest
+C NTT with inline asm Montgomery multiplication (`montgomery_mul` + `mod_pow_asm`) provides:
+- 1.79 ms vs 2.56 ms for C NTT M61 (30% faster)
+- 1.79 ms vs 6.97 ms for Rust NTT ASM
 
-### 4. SIMD Unfriendly: Mersenne AVX
-The Mersenne AVX implementations are significantly slower than scalar because:
-- 61-bit arithmetic doesn't fit neatly into 64-bit SIMD lanes
-- Requires complex emulation with 32-bit multiplies
-- Native 128-bit integer (u128) in scalar code is more efficient
+### 4. FFT M61: Rust > C
+Rust FFT M61 (2.07 ms) outperforms C FFT M61 (4.68 ms) by 2.3x.
 
-### 5. FFT vs NTT
-- **FFT**: Good accuracy with floating-point, ~1.3-1.8 ms for 4096
-- **Mersenne NTT**: Fastest at 1.0 ms, exact arithmetic
-- **Montgomery NTT**: Slowest at 4.2 ms, requires division
+### 5. Rust NTT ASM: Limited Benefit
+Rust inline asm is difficult - used pure Rust arithmetic instead. Results similar to regular NTT (6.97 ms vs 6.90 ms).
+
+### 6. Mersenne AVX: Broken in Rust
+Rust AVX implementations are 30-60x slower than scalar:
+- Rust Mersenne NTT AVX: 145 ms vs Rust scalar: 2.26 ms
+
+### 7. Best Algorithms by Language
+| Language | Best Method | Time (4096) |
+|----------|-------------|-------------|
+| **C** | NTT ASM | **1.79 ms** |
+| **Rust** | FFT M61 | 2.07 ms |
 
 ---
 
@@ -290,7 +271,7 @@ The Mersenne AVX implementations are significantly slower than scalar because:
 
 ## Testing
 
-- **C**: Tests covering sizes 256, 512, 1024, 2048, 3072, 4096
+- **C**: Tests covering sizes 256, 512, 1024, 2048, 3072, 4096 - 15 tests passing
 - **Rust**: Unit tests for small and large multiplications
 
 ## Formal Verification

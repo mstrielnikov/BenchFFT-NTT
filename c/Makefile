@@ -24,6 +24,8 @@ build-mersenne: $(OBJ) $(LIB)/libfft_mersenne.a
 
 build-mersenne-avx: $(OBJ) $(LIB)/libfft_mersenne_avx.a
 
+build-both: $(OBJ) $(LIB)/libfft_both.a
+
 build-schoolbook: $(OBJ) $(LIB)/libfft_schoolbook.a
 
 $(OBJ):
@@ -63,12 +65,16 @@ $(LIB)/libfft_mersenne_avx.a: $(OBJ)/bigint.o $(OBJ)/fft_split_avx.o $(OBJ)/ntt_
 	mkdir -p $(LIB)
 	ar rcs $@ $^
 
+$(LIB)/libfft_both.a: $(OBJ)/bigint.o $(OBJ)/fft_split.o $(OBJ)/fft_mersenne.o $(OBJ)/ntt_mersenne.o $(OBJ)/ntt_mont_asm.o
+	mkdir -p $(LIB)
+	ar rcs $@ $^
+
 $(LIB)/libfft_schoolbook.a: $(OBJ)/bigint.o $(OBJ)/mult_schoolbook.o
 	mkdir -p $(LIB)
 	ar rcs $@ $^
 
-test: build
-	$(CC) $(CFLAGS) $(TEST)/test.c -L $(LIB) -lfft -o $(TEST)/test $(LDFLAGS)
+test: build-both
+	$(CC) $(CFLAGS) $(TEST)/test.c -L $(LIB) -lfft_both -o $(TEST)/test $(LDFLAGS)
 	./$(TEST)/test
 
 test-scalar: build-scalar
@@ -90,6 +96,10 @@ bench-avx: build-avx
 bench-mersenne: build-mersenne
 	$(CC) $(CFLAGS) $(TEST)/bench.c -L $(LIB) -lfft_mersenne -o $(TEST)/bench_mersenne $(LDFLAGS)
 	./$(TEST)/bench_mersenne
+
+bench-both: build-both
+	$(CC) $(CFLAGS) $(TEST)/bench.c -L $(LIB) -lfft_both -o $(TEST)/bench $(LDFLAGS)
+	./$(TEST)/bench
 
 bench-mersenne-avx: build-mersenne-avx
 	$(CC) $(CFLAGS_AVX) $(TEST)/bench.c -L $(LIB) -lfft_mersenne_avx -o $(TEST)/bench_mersenne_avx $(LDFLAGS)
