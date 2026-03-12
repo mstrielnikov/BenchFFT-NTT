@@ -73,7 +73,7 @@ static void *xrealloc(void *ptr, size_t size) {
     return p;
 }
 
-BigUInt *biguint_mul_ntt_mersenne(const BigUInt *a, const BigUInt *b) {
+BigUInt *biguint_mul_fft_mersenne(const BigUInt *a, const BigUInt *b) {
     if (biguint_is_zero(a) || biguint_is_zero(b)) {
         return biguint_new();
     }

@@ -142,14 +142,14 @@ All times in milliseconds. Lower is better.
 
 ### All Methods
 
-| Size | FFT | FFT M61 | NTT M61 | NTT ASM |
-|------|-----|---------|---------|---------|
-| 256  | 5.70 ms | 11.97 ms | 2.83 ms | 2.11 ms |
-| 512  | 2.45 ms | 7.51 ms | 3.07 ms | 2.16 ms |
-| 1024 | 2.12 ms | 6.27 ms | 2.58 ms | 1.96 ms |
-| 2048 | 2.33 ms | 6.63 ms | 2.75 ms | 2.06 ms |
-| 3072 | 3.46 ms | 7.62 ms | 4.08 ms | 2.95 ms |
-| 4096 | 2.31 ms | 4.68 ms | 2.56 ms | 1.79 ms |
+| Size | FFT | FFT AVX | FFT M61 | NTT M61 | NTT ASM |
+|------|-----|---------|---------|---------|---------|
+| 256  | 5.21 ms | 2.69 ms | 14.18 ms | 6.27 ms | 3.60 ms |
+| 512  | 4.11 ms | 2.78 ms | 12.32 ms | 5.03 ms | 3.65 ms |
+| 1024 | 3.33 ms | 2.25 ms | 10.30 ms | 3.98 ms | 3.00 ms |
+| 2048 | 3.82 ms | 2.55 ms | 10.77 ms | 4.33 ms | 3.31 ms |
+| 3072 | 5.61 ms | 4.14 ms | 12.37 ms | 6.59 ms | 4.83 ms |
+| 4096 | 3.64 ms | 2.76 ms | 7.76 ms | 4.14 ms | 2.91 ms |
 
 ---
 
@@ -159,34 +159,34 @@ All times in milliseconds. Lower is better.
 
 | Size | FFT | FFT AVX | NTT | NTT ASM | NTT M61 | FFT M61 | Mersenne |
 |------|-----|---------|-----|---------|---------|---------|----------|
-| 256  | 5.55 ms | 12.60 ms | 13.56 ms | 10.34 ms | 10.77 ms | 2.47 ms | 4.39 ms |
-| 512  | 2.79 ms | 13.89 ms | 11.44 ms | 10.96 ms | 11.22 ms | 2.64 ms | 4.08 ms |
-| 1024 | 2.25 ms | 12.47 ms | 9.72 ms | 9.56 ms | 11.16 ms | 3.18 ms | 3.40 ms |
-| 2048 | 2.93 ms | 13.85 ms | 10.62 ms | 10.42 ms | 10.67 ms | 2.61 ms | 3.40 ms |
-| 3072 | 3.40 ms | 15.38 ms | 13.77 ms | 11.32 ms | 11.54 ms | 3.14 ms | 3.70 ms |
-| 4096 | 1.86 ms | 9.54 ms | 6.90 ms | 6.97 ms | 6.92 ms | 2.07 ms | 2.26 ms |
+| 256  | 6.29 ms | 20.67 ms | 19.03 ms | 17.17 ms | 18.83 ms | 4.05 ms | 6.99 ms |
+| 512  | 4.31 ms | 23.21 ms | 18.71 ms | 18.37 ms | 18.91 ms | 4.41 ms | 6.55 ms |
+| 1024 | 3.60 ms | 20.96 ms | 16.25 ms | 15.79 ms | 16.15 ms | 3.66 ms | 5.55 ms |
+| 2048 | 4.45 ms | 22.95 ms | 17.54 ms | 17.29 ms | 17.45 ms | 4.25 ms | 5.61 ms |
+| 3072 | 5.37 ms | 25.14 ms | 18.74 ms | 18.68 ms | 19.04 ms | 5.47 ms | 5.97 ms |
+| 4096 | 3.16 ms | 15.43 ms | 12.78 ms | 11.34 ms | 11.59 ms | 3.50 ms | 3.61 ms |
 
 ### Mersenne NTT AVX (broken/slow)
 
 | Size | Time |
 |------|------|
-| 256  | 71.73 ms |
-| 512  | 95.33 ms |
-| 1024 | 97.98 ms |
-| 2048 | 141.80 ms |
-| 3072 | 236.99 ms |
-| 4096 | 144.72 ms |
+| 256  | 122.19 ms |
+| 512  | 147.41 ms |
+| 1024 | 160.14 ms |
+| 2048 | 243.20 ms |
+| 3072 | 383.05 ms |
+| 4096 | 227.90 ms |
 
 ### Schoolbook Multiplication
 
 | Size | Time |
 |------|------|
-| 256  | 6.28 ms |
-| 512  | 12.66 ms |
-| 1024 | 20.57 ms |
-| 2048 | 40.76 ms |
-| 3072 | 45.74 ms |
-| 4096 | 51.16 ms |
+| 256  | 10.43 ms |
+| 512  | 20.71 ms |
+| 1024 | 33.90 ms |
+| 2048 | 68.45 ms |
+| 3072 | 79.73 ms |
+| 4096 | 80.37 ms |
 
 ---
 
@@ -194,17 +194,17 @@ All times in milliseconds. Lower is better.
 
 ### 4096-word multiplication
 
-| Implementation | FFT | NTT ASM | NTT M61 | FFT M61 | Mersenne |
-|----------------|-----|---------|---------|---------|----------|
-| **C** | 2.31 ms | **1.79 ms** | 2.56 ms | 4.68 ms | - |
-| **Rust** | 1.86 ms | 6.97 ms | 6.92 ms | **2.07 ms** | 2.26 ms |
+| Implementation | FFT | FFT AVX | NTT ASM | NTT M61 | FFT M61 |
+|----------------|-----|---------|---------|---------|---------|
+| **C** | 3.64 ms | 2.76 ms | 2.91 ms | 4.14 ms | 7.76 ms |
+| **Rust** | 3.16 ms | 15.43 ms | 11.34 ms | 11.59 ms | 3.50 ms |
 
 ### 1024-word multiplication
 
-| Implementation | FFT | NTT ASM | NTT M61 | FFT M61 | Mersenne |
-|----------------|-----|---------|---------|---------|----------|
-| **C** | 2.12 ms | **1.96 ms** | 2.58 ms | 6.27 ms | - |
-| **Rust** | 2.25 ms | 9.56 ms | 11.16 ms | **3.18 ms** | 3.40 ms |
+| Implementation | FFT | FFT AVX | NTT ASM | NTT M61 | FFT M61 |
+|----------------|-----|---------|---------|---------|---------|
+| **C** | 3.33 ms | 2.25 ms | 3.00 ms | 3.98 ms | 10.30 ms |
+| **Rust** | 3.60 ms | 20.96 ms | 15.79 ms | 16.15 ms | 3.66 ms |
 
 ---
 
@@ -214,47 +214,49 @@ All times in milliseconds. Lower is better.
 
 | Rank | Algorithm | Language | Time |
 |------|-----------|----------|------|
-| 1 | C NTT ASM | C | **1.79 ms** |
-| 2 | C NTT M61 | C | 2.56 ms |
-| 3 | C FFT | C | 2.31 ms |
-| 4 | Rust FFT M61 | Rust | 2.07 ms |
-| 5 | Rust FFT | Rust | 1.86 ms |
-| 6 | Rust Mersenne NTT | Rust | 2.26 ms |
-| 7 | C FFT M61 | C | 4.68 ms |
-| 8 | Rust NTT ASM | Rust | 6.97 ms |
+| 1 | C FFT AVX | C | **2.76 ms** |
+| 2 | C NTT ASM | C | 2.91 ms |
+| 3 | Rust FFT | Rust | 3.16 ms |
+| 4 | Rust FFT M61 | Rust | 3.50 ms |
+| 5 | C FFT | C | 3.64 ms |
+| 6 | C NTT M61 | C | 4.14 ms |
+| 7 | Rust NTT ASM | Rust | 11.34 ms |
+| 8 | Rust NTT M61 | Rust | 11.59 ms |
+| 9 | C FFT M61 | C | 7.76 ms |
+| 10 | Rust FFT AVX | Rust | 15.43 ms |
 
 ---
 
 ## Key Findings
 
-### 1. C NTT ASM: New Champion
-The C implementation with inline asm Montgomery multiplication is now the fastest at **1.79 ms** for 4096 words, a 30% improvement over NTT M61.
+### 1. C FFT AVX is Now the Fastest
+The C implementation with FFT AVX intrinsics is now the fastest at **2.76 ms** for 4096 words.
 
-### 2. C vs Rust: Different Winners
-- **C**: NTT ASM (inline asm Montgomery) is fastest at 1.79 ms
-- **Rust**: FFT M61 is fastest at 2.07 ms
-- C NTT ASM beats all Rust implementations by 1.15-5x
+### 2. C vs Rust: Clear Winner in Each Category
+- **C FFT AVX**: 2.76 ms (fastest overall)
+- **C NTT ASM**: 2.91 ms (second fastest)
+- **Rust FFT**: 3.16 ms
+- **Rust FFT M61**: 3.50 ms
 
-### 3. Inline ASM Makes C NTT Fastest
-C NTT with inline asm Montgomery multiplication (`montgomery_mul` + `mod_pow_asm`) provides:
-- 1.79 ms vs 2.56 ms for C NTT M61 (30% faster)
-- 1.79 ms vs 6.97 ms for Rust NTT ASM
+### 3. FFT AVX: C >> Rust
+C FFT AVX (2.76 ms) is 5.6x faster than Rust FFT AVX (15.43 ms). The Rust AVX implementation is not competitive.
 
-### 4. FFT M61: Rust > C
-Rust FFT M61 (2.07 ms) outperforms C FFT M61 (4.68 ms) by 2.3x.
+### 4. NTT ASM: C >> Rust
+C NTT ASM (2.91 ms) is 3.9x faster than Rust NTT ASM (11.34 ms).
 
-### 5. Rust NTT ASM: Limited Benefit
-Rust inline asm is difficult - used pure Rust arithmetic instead. Results similar to regular NTT (6.97 ms vs 6.90 ms).
+### 5. FFT M61: Rust > C
+Rust FFT M61 (3.50 ms) is faster than C FFT M61 (7.76 ms).
 
 ### 6. Mersenne AVX: Broken in Rust
-Rust AVX implementations are 30-60x slower than scalar:
-- Rust Mersenne NTT AVX: 145 ms vs Rust scalar: 2.26 ms
+Rust AVX implementations are extremely slow:
+- Rust Mersenne NTT AVX: 228 ms vs Rust scalar: 3.61 ms (63x slower!)
+- The 61-bit arithmetic doesn't map well to SIMD
 
 ### 7. Best Algorithms by Language
 | Language | Best Method | Time (4096) |
 |----------|-------------|-------------|
-| **C** | NTT ASM | **1.79 ms** |
-| **Rust** | FFT M61 | 2.07 ms |
+| **C** | FFT AVX | **2.76 ms** |
+| **Rust** | FFT | 3.16 ms |
 
 ---
 

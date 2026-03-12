@@ -56,6 +56,15 @@ void run_benchmark(const char *name, size_t size, int iterations) {
     end = clock();
     printf("NTT ASM%4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
     
+    // FFT AVX Benchmark
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        BigUInt *c = biguint_mul_fft_split_avx(a, b);
+        biguint_free(c);
+    }
+    end = clock();
+    printf("FFTAVX %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    
     biguint_free(a);
     biguint_free(b);
 }
