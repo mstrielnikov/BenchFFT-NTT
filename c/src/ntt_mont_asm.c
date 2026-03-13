@@ -5,24 +5,44 @@
 
 #define NTT_MOD (998244353ULL)
 #define NTT_ROOT (3ULL)
-#define MONTGOMERY_R (4294967296ULL)
-#define MONTGOMERY_R_INV (330382944ULL)
+/* MONTGOMERY_R_INV = (-NTT_MOD)^-1 mod 2^64 */
+#define MONTGOMERY_R_INV (932051664404074495ULL)
 
+/*
+ * montgomery_mul(a, b, mod) computes (a * b * R^-1) mod `mod`
+ * where R = 2^64.
+ *
+ * It requires `a` and `b` to be in Montgomery form: a = A*R mod mod.
+ * The constant MONTGOMERY_R_INV must be (-mod)^-1 mod 2^64.
+ */
 static inline uint64_t montgomery_mul(uint64_t a, uint64_t b, uint64_t mod) {
     uint64_t result;
+    /*
+     * 1. Compute T = a * b (128-bit product in rdx:rax)
+     * 2. Compute m = (T_lo * MONTGOMERY_R_INV) mod 2^64
+     * 3. Compute T + m * mod. The low 64 bits are guaranteed 0.
+     * 4. The result is the high 64 bits, minus mod if it overflowed >= mod.
+     */
     __asm__ (
-        "mulq %2\n"
-        "movq %%rax, %%r11\n"
-        "movq %%rdx, %%r12\n"
-        "mulq %3\n"
-        "addq %%r11, %%rax\n"
-        "adcq %%r12, %%rdx\n"
-        "movq $0, %%r11\n"
-        "cmpq %4, %%rdx\n"
-        "cmovaeq %%r11, %%rdx\n"
-        : "=a"(result)
-        : "a"(a), "r"(b), "r"(MONTGOMERY_R_INV), "r"(mod)
-        : "r11", "r12", "rdx", "cc"
+        "mulq %2\n\t"               // rdx:rax = a * b
+        "movq %%rax, %%r8\n\t"        // r8 = T_lo
+        "movq %%rdx, %%r9\n\t"        // r9 = T_hi
+        
+        "imulq %3, %%rax\n\t"         // rax = m = T_lo * mod_inv mod 2^64
+        "mulq %4\n\t"                 // rdx:rax = m * mod
+        
+        "addq %%r8, %%rax\n\t"        // rax = T_lo + (m * mod)_lo  (always 0, sets carry)
+        "adcq %%r9, %%rdx\n\t"        // rdx = T_hi + (m * mod)_hi + carry  (this is (T + m*mod)/2^64)
+        
+        "movq %%rdx, %%rax\n\t"       // rax = result
+        "subq %4, %%rdx\n\t"          // rdx = result - mod
+        "cmovnc %%rdx, %%rax\n\t"     // if (result >= mod) result = result - mod
+        : "=&a"(result)               // %0
+        : "0"(a),                     // %1 (same as %0, rax)
+          "r"(b),                     // %2
+          "r"(MONTGOMERY_R_INV),      // %3
+          "r"(mod)                    // %4
+        : "rdx", "r8", "r9", "cc"
     );
     return result;
 }
@@ -102,17 +122,36 @@ BigUInt *biguint_mul_ntt_mont_asm(const BigUInt *a, const BigUInt *b) {
         return NULL;
     }
     
-    for (size_t i = 0; i < a->len; i++) fa[i] = a->words[i] % NTT_MOD;
-    for (size_t i = 0; i < b->len; i++) fb[i] = b->words[i] % NTT_MOD;
+    /*
+     * R = 2^64 mod NTT_MOD. We need this to encode inputs into Montgomery form.
+     * 2^64 = 18446744073709551616.
+     * 18446744073709551616 % 998244353 = 136407672
+     */
+    /* R^2 mod NTT_MOD. Used to convert normal -> Montgomery */
+    const uint64_t R2_MOD = 299560064ULL;
     
-    ntt_inplace(fa, n, NTT_MOD, NTT_ROOT, false);
-    ntt_inplace(fb, n, NTT_MOD, NTT_ROOT, false);
+    // Encode inputs to Montgomery form: a_mont = a * R mod NTT_MOD
+    // We achieve this by montgomery_mul(a, R2_MOD) = a * R^2 * R^-1 = a * R
+    for (size_t i = 0; i < a->len; i++) fa[i] = montgomery_mul(a->words[i] % NTT_MOD, R2_MOD, NTT_MOD);
+    for (size_t i = 0; i < b->len; i++) fb[i] = montgomery_mul(b->words[i] % NTT_MOD, R2_MOD, NTT_MOD);
+    
+    // The NTT_ROOT also needs to be in Montgomery form
+    uint64_t mont_root = montgomery_mul(NTT_ROOT, R2_MOD, NTT_MOD);
+    
+    ntt_inplace(fa, n, NTT_MOD, mont_root, false);
+    ntt_inplace(fb, n, NTT_MOD, mont_root, false);
     
     for (size_t i = 0; i < n; i++) {
         fa[i] = montgomery_mul(fa[i], fb[i], NTT_MOD);
     }
     
-    ntt_inplace(fa, n, NTT_MOD, NTT_ROOT, true);
+    ntt_inplace(fa, n, NTT_MOD, mont_root, true);
+    
+    // Decode from Montgomery form: montgomery_mul(x, 1) = x * 1 * R^-1 = x * R^-1
+    // which cancels the R factor.
+    for (size_t i = 0; i < n; i++) {
+        fa[i] = montgomery_mul(fa[i], 1, NTT_MOD);
+    }
     
     BigUInt *res = biguint_new();
     if (!res) {

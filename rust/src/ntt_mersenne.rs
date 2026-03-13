@@ -36,26 +36,25 @@ unsafe fn m61_sub_avx(a: __m256i, b: __m256i) -> __m256i {
     _mm256_and_si256(x, mod_mask)
 }
 
+/* Note: m61_mul_avx is mathematically broken for full 61-bit inputs 
+ * due to 32-bit boundary overflow in mul_epu32 logic. Since AVX2 lacks 
+ * a 64x64->128 integer multiply, we fallback to scalar 128-bit multiply 
+ * for the limbs, then reload to AVX. */
 #[cfg(target_arch = "x86_64")]
 #[inline]
 unsafe fn m61_mul_avx(a: __m256i, b: __m256i) -> __m256i {
-    let mod_mask = _mm256_set1_epi64x(M61_MOD as i64);
-
-    let a_lo = _mm256_and_si256(a, mod_mask);
-    let a_hi = _mm256_srli_epi64(a, M61_P as i32);
-    let b_lo = _mm256_and_si256(b, mod_mask);
-    let b_hi = _mm256_srli_epi64(b, M61_P as i32);
-
-    let lo_lo = _mm256_mul_epu32(a_lo, b_lo);
-    let lo_hi = _mm256_mul_epu32(a_lo, b_hi);
-    let hi_lo = _mm256_mul_epu32(a_hi, b_lo);
-    let hi_hi = _mm256_mul_epu32(a_hi, b_hi);
-
-    let t1 = _mm256_or_si256(lo_lo, _mm256_slli_epi64(lo_hi, 32));
-    let t2 = _mm256_or_si256(hi_lo, _mm256_slli_epi64(hi_hi, 32));
-    let prod = _mm256_add_epi64(t1, _mm256_slli_epi64(t2, M61_P as i32));
-
-    m61_reduce_avx(prod)
+    let mut arr_a = [0u64; 4];
+    let mut arr_b = [0u64; 4];
+    let mut arr_out = [0u64; 4];
+    
+    _mm256_storeu_si256(arr_a.as_mut_ptr() as *mut __m256i, a);
+    _mm256_storeu_si256(arr_b.as_mut_ptr() as *mut __m256i, b);
+    
+    for i in 0..4 {
+        arr_out[i] = m61_mul(arr_a[i], arr_b[i]);
+    }
+    
+    _mm256_loadu_si256(arr_out.as_ptr() as *const __m256i)
 }
 
 #[cfg(target_arch = "x86_64")]

@@ -2,35 +2,35 @@ use crate::bigint::{next_power_of_two, BigUInt};
 
 const NTT_MOD: u64 = 998244353;
 const NTT_ROOT: u64 = 3;
-const MONTGOMERY_R_INV: u64 = 330382944;
+const MONTGOMERY_R_INV: u64 = 17450252288407896063; // (-998244353)^-1 mod 2^64
+const R2_MOD: u64 = 299560064;
 
 #[inline]
 fn montgomery_mul(a: u64, b: u64) -> u64 {
-    let lo = (a as u128) * (b as u128);
-    let mi = ((lo & 0xffffffff) as u64).wrapping_mul(MONTGOMERY_R_INV);
-    let hi = ((lo >> 64) as u64).wrapping_add(((mi as u128 * NTT_MOD as u128) >> 64) as u64);
-    let result = hi.wrapping_sub(NTT_MOD);
-    if result > hi {
-        result.wrapping_add(NTT_MOD)
-    } else {
-        result
+    let t = (a as u128) * (b as u128);
+    let m = (t as u64).wrapping_mul(MONTGOMERY_R_INV);
+    let m_mod = (m as u128) * (NTT_MOD as u128);
+    
+    // (t + m_mod) is mathematically guaranteed to be divisible by 2^64
+    let mut result = ((t + m_mod) >> 64) as u64;
+    
+    if result >= NTT_MOD {
+        result -= NTT_MOD;
     }
+    result
 }
 
-#[inline]
-fn mod_mul(a: u64, b: u64) -> u64 {
-    ((a as u128) * (b as u128) % NTT_MOD as u128) as u64
-}
+// mod_mul removed, use montgomery_mul.
 
 fn mod_pow_asm(mut base: u64, mut exp: u64) -> u64 {
-    let mut result = 1u64;
-    base %= NTT_MOD;
-
+    let mut result = montgomery_mul(1, R2_MOD); // 1 in montgomery form
+    // Note: base is assumed to be in Montgomery form natively.
+    
     while exp > 0 {
         if exp & 1 == 1 {
-            result = mod_mul(result, base);
+            result = montgomery_mul(result, base);
         }
-        base = mod_mul(base, base);
+        base = montgomery_mul(base, base);
         exp >>= 1;
     }
     result
@@ -62,10 +62,10 @@ fn ntt_inplace(a: &mut [u64], mod_val: u64, root: u64, inverse: bool) {
         };
 
         for i in (0..n).step_by(len) {
-            let mut w = 1u64;
+            let mut w = montgomery_mul(1, R2_MOD);
             for j in 0..len / 2 {
                 let u = a[i + j];
-                let v = mod_mul(a[i + j + len / 2], w);
+                let v = montgomery_mul(a[i + j + len / 2], w);
                 a[i + j] = u + v;
                 if a[i + j] >= mod_val {
                     a[i + j] -= mod_val;
@@ -74,16 +74,16 @@ fn ntt_inplace(a: &mut [u64], mod_val: u64, root: u64, inverse: bool) {
                 if a[i + j + len / 2] >= mod_val {
                     a[i + j + len / 2] -= mod_val;
                 }
-                w = mod_mul(w, wlen);
+                w = montgomery_mul(w, wlen);
             }
         }
         len <<= 1;
     }
 
     if inverse {
-        let inv_n = mod_pow_asm(n as u64, mod_val - 2);
+        let inv_n = mod_pow_asm(montgomery_mul(n as u64, R2_MOD), mod_val - 2);
         for x in a.iter_mut() {
-            *x = mod_mul(*x, inv_n);
+            *x = montgomery_mul(*x, inv_n);
         }
     }
 }
@@ -100,20 +100,26 @@ pub fn biguint_mul_ntt_mont_asm(a: &BigUInt, b: &BigUInt) -> BigUInt {
     let mut fb: Vec<u64> = vec![0; n];
 
     for i in 0..a.words().len() {
-        fa[i] = a.words()[i] % NTT_MOD;
+        fa[i] = montgomery_mul(a.words()[i] % NTT_MOD, R2_MOD);
     }
     for i in 0..b.words().len() {
-        fb[i] = b.words()[i] % NTT_MOD;
+        fb[i] = montgomery_mul(b.words()[i] % NTT_MOD, R2_MOD);
     }
 
-    ntt_inplace(&mut fa, NTT_MOD, NTT_ROOT, false);
-    ntt_inplace(&mut fb, NTT_MOD, NTT_ROOT, false);
+    let mont_root = montgomery_mul(NTT_ROOT, R2_MOD);
+
+    ntt_inplace(&mut fa, NTT_MOD, mont_root, false);
+    ntt_inplace(&mut fb, NTT_MOD, mont_root, false);
 
     for i in 0..n {
         fa[i] = montgomery_mul(fa[i], fb[i]);
     }
 
-    ntt_inplace(&mut fa, NTT_MOD, NTT_ROOT, true);
+    ntt_inplace(&mut fa, NTT_MOD, mont_root, true);
+
+    for i in 0..n {
+        fa[i] = montgomery_mul(fa[i], 1);
+    }
 
     let mut result = Vec::with_capacity(result_len);
     for i in 0..result_len {

@@ -65,7 +65,7 @@ $(LIB)/libfft_mersenne_avx.a: $(OBJ)/bigint.o $(OBJ)/fft_split_avx.o $(OBJ)/ntt_
 	mkdir -p $(LIB)
 	ar rcs $@ $^
 
-$(LIB)/libfft_both.a: $(OBJ)/bigint.o $(OBJ)/fft_split.o $(OBJ)/fft_split_avx.o $(OBJ)/fft_mersenne.o $(OBJ)/ntt_mersenne.o $(OBJ)/ntt_mont_asm.o
+$(LIB)/libfft_both.a: $(OBJ)/bigint.o $(OBJ)/fft_split.o $(OBJ)/fft_split_avx.o $(OBJ)/fft_mersenne.o $(OBJ)/ntt_mersenne.o $(OBJ)/ntt_mersenne_avx.o $(OBJ)/ntt_mont.o $(OBJ)/ntt_mont_avx.o $(OBJ)/ntt_mont_asm.o
 	mkdir -p $(LIB)
 	ar rcs $@ $^
 

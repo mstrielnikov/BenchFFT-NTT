@@ -3,24 +3,34 @@ use crate::bigint::{next_power_of_two, BigUInt};
 const MONT_MOD: u64 = 998244353;
 const MONT_ROOT: u64 = 3;
 
-fn mod_pow(mut a: u64, mut e: u64, m: u64) -> u64 {
-    let mut res = 1;
-    while e > 0 {
-        if e & 1 == 1 {
-            res = ((res as u128 * a as u128) % m as u128) as u64;
-        }
-        a = ((a as u128 * a as u128) % m as u128) as u64;
-        e >>= 1;
-    }
-    res
-}
+const MONTGOMERY_R_INV: u64 = 17450252288407896063; // (-998244353)^-1 mod 2^64
+const R2_MOD: u64 = 299560064;
 
 #[inline]
-fn mod_mul(a: u64, b: u64) -> u64 {
-    ((a as u128 * b as u128) % MONT_MOD as u128) as u64
+fn montgomery_mul(a: u64, b: u64) -> u64 {
+    let t = (a as u128) * (b as u128);
+    let m = (t as u64).wrapping_mul(MONTGOMERY_R_INV);
+    let m_mod = (m as u128) * (MONT_MOD as u128);
+    let mut result = ((t + m_mod) >> 64) as u64;
+    if result >= MONT_MOD {
+        result -= MONT_MOD;
+    }
+    result
 }
 
-fn ntt_inplace(a: &mut [u64], inverse: bool) {
+fn mod_pow_mont(mut base: u64, mut exp: u64) -> u64 {
+    let mut result = montgomery_mul(1, R2_MOD);
+    while exp > 0 {
+        if exp & 1 == 1 {
+            result = montgomery_mul(result, base);
+        }
+        base = montgomery_mul(base, base);
+        exp >>= 1;
+    }
+    result
+}
+
+fn ntt_inplace(a: &mut [u64], root: u64, inverse: bool) {
     let n = a.len();
 
     let mut j = 0;
@@ -38,18 +48,18 @@ fn ntt_inplace(a: &mut [u64], inverse: bool) {
 
     let mut len = 2;
     while len <= n {
-        let wlen = mod_pow(MONT_ROOT, (MONT_MOD - 1) / len as u64, MONT_MOD);
+        let wlen = mod_pow_mont(root, (MONT_MOD - 1) / len as u64);
         let wlen = if inverse {
-            mod_pow(wlen, MONT_MOD - 2, MONT_MOD)
+            mod_pow_mont(wlen, MONT_MOD - 2)
         } else {
             wlen
         };
 
         for i in (0..n).step_by(len) {
-            let mut w = 1u64;
+            let mut w = montgomery_mul(1, R2_MOD);
             for j in 0..len / 2 {
                 let u = a[i + j];
-                let v = mod_mul(a[i + j + len / 2], w);
+                let v = montgomery_mul(a[i + j + len / 2], w);
                 a[i + j] = u + v;
                 if a[i + j] >= MONT_MOD {
                     a[i + j] -= MONT_MOD;
@@ -58,16 +68,16 @@ fn ntt_inplace(a: &mut [u64], inverse: bool) {
                 if a[i + j + len / 2] >= MONT_MOD {
                     a[i + j + len / 2] -= MONT_MOD;
                 }
-                w = mod_mul(w, wlen);
+                w = montgomery_mul(w, wlen);
             }
         }
         len <<= 1;
     }
 
     if inverse {
-        let inv_n = mod_pow(n as u64, MONT_MOD - 2, MONT_MOD);
+        let inv_n = mod_pow_mont(montgomery_mul(n as u64, R2_MOD), MONT_MOD - 2);
         for x in a.iter_mut() {
-            *x = mod_mul(*x, inv_n);
+            *x = montgomery_mul(*x, inv_n);
         }
     }
 }
@@ -83,22 +93,29 @@ pub fn biguint_mul_ntt_mont(a: &BigUInt, b: &BigUInt) -> BigUInt {
     let mut fb: Vec<u64> = vec![0; n];
 
     for i in 0..a.words().len() {
-        fa[i] = a.words()[i] % MONT_MOD;
+        fa[i] = montgomery_mul(a.words()[i] % MONT_MOD, R2_MOD);
     }
     for i in 0..b.words().len() {
-        fb[i] = b.words()[i] % MONT_MOD;
+        fb[i] = montgomery_mul(b.words()[i] % MONT_MOD, R2_MOD);
     }
 
-    ntt_inplace(&mut fa, false);
-    ntt_inplace(&mut fb, false);
+    let mont_root = montgomery_mul(MONT_ROOT, R2_MOD);
+
+    ntt_inplace(&mut fa, mont_root, false);
+    ntt_inplace(&mut fb, mont_root, false);
 
     for i in 0..n {
-        fa[i] = mod_mul(fa[i], fb[i]);
+        fa[i] = montgomery_mul(fa[i], fb[i]);
     }
 
-    ntt_inplace(&mut fa, true);
+    ntt_inplace(&mut fa, mont_root, true);
 
-    BigUInt::from_slice(&fa)
+    let mut result = Vec::with_capacity(n);
+    for i in 0..n {
+        result.push(montgomery_mul(fa[i], 1));
+    }
+
+    BigUInt::from_slice(&result)
 }
 
 #[cfg(test)]

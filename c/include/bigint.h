@@ -40,16 +40,14 @@ int biguint_cmp(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_add(const BigUInt *a, const BigUInt *b);
 
 BigUInt *biguint_mul_fft_split(const BigUInt *a, const BigUInt *b);
-BigUInt *biguint_mul_ntt_mersenne(const BigUInt *a, const BigUInt *b);
+BigUInt *biguint_mul_fft_mersenne(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont_asm(const BigUInt *a, const BigUInt *b);
-
-#if defined(BUILD_SCHOOLBOOK)
-BigUInt *biguint_mul_schoolbook(const BigUInt *a, const BigUInt *b);
-#endif
+BigUInt *biguint_mul_ntt_mont_m61(const BigUInt *a, const BigUInt *b);   /* ntt_mersenne.c: Integer-NTT mod 998244353 → M61 */
 
 #if HAS_AVX
 BigUInt *biguint_mul_fft_split_avx(const BigUInt *a, const BigUInt *b);
+BigUInt *biguint_mul_ntt_mersenne_avx(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont_avx(const BigUInt *a, const BigUInt *b);
 #endif
 

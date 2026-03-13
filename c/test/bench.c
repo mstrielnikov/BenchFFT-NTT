@@ -27,34 +27,7 @@ void run_benchmark(const char *name, size_t size, int iterations) {
         biguint_free(c);
     }
     clock_t end = clock();
-    printf("FFT     %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
-    
-    // FFT+M61 Benchmark
-    start = clock();
-    for (int i = 0; i < iterations; i++) {
-        BigUInt *c = biguint_mul_ntt_mont(a, b);
-        biguint_free(c);
-    }
-    end = clock();
-    printf("FFT M61 %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
-    
-    // NTT M61 Benchmark
-    start = clock();
-    for (int i = 0; i < iterations; i++) {
-        BigUInt *c = biguint_mul_ntt_mersenne(a, b);
-        biguint_free(c);
-    }
-    end = clock();
-    printf("NTT M61 %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
-    
-    // NTT Mont ASM Benchmark
-    start = clock();
-    for (int i = 0; i < iterations; i++) {
-        BigUInt *c = biguint_mul_ntt_mont_asm(a, b);
-        biguint_free(c);
-    }
-    end = clock();
-    printf("NTT ASM%4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    printf("FFT       %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
     
     // FFT AVX Benchmark
     start = clock();
@@ -63,7 +36,50 @@ void run_benchmark(const char *name, size_t size, int iterations) {
         biguint_free(c);
     }
     end = clock();
-    printf("FFTAVX %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    // FFT M61 Benchmark
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        BigUInt *c = biguint_mul_fft_mersenne(a, b);
+        biguint_free(c);
+    }
+    end = clock();
+    printf("FFT M61   %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    
+    // NTT M61 (Mersenne scalar) Benchmark
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        BigUInt *c = biguint_mul_ntt_mont_m61(a, b);
+        biguint_free(c);
+    }
+    end = clock();
+    printf("NTT M61   %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    
+    // NTT Benchmark
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        BigUInt *c = biguint_mul_ntt_mont(a, b);
+        biguint_free(c);
+    }
+    end = clock();
+    printf("NTT       %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    
+    // NTT ASM Benchmark
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        BigUInt *c = biguint_mul_ntt_mont_asm(a, b);
+        biguint_free(c);
+    }
+    end = clock();
+    printf("NTT ASM   %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
+    
+    // Mersenne (Direct M61) Benchmark
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        BigUInt *c = biguint_mul_ntt_mersenne_avx(a, b);
+        biguint_free(c);
+    }
+    end = clock();
+    printf("Mersenne  %4zu:   %.4f ms (%d iters)\n", size, time_ms(start, end), iterations);
     
     biguint_free(a);
     biguint_free(b);
@@ -76,7 +92,6 @@ int main() {
     
     srand(42);
     
-    // ML-KEM sizes (k = 2,3,4)
     printf("ML-KEM-512 (256 words):\n");
     run_benchmark("FFT", 256, 100);
     printf("\n");
@@ -89,12 +104,10 @@ int main() {
     run_benchmark("FFT", 1024, 20);
     printf("\n");
     
-    // ML-DSA sizes
     printf("ML-DSA (2048 words):\n");
     run_benchmark("FFT", 2048, 10);
     printf("\n");
     
-    // Extended sizes
     printf("Extended (3072 words):\n");
     run_benchmark("FFT", 3072, 5);
     printf("\n");
