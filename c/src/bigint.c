@@ -2,12 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void *xrealloc(void *ptr, size_t size) {
-    void *p = realloc(ptr, size);
-    if (!p && size > 0) abort();
-    return p;
-}
-
 void biguint_normalize(BigUInt *a) {
     while (a->len > 0 && a->words[a->len - 1] == 0) {
         a->len--;

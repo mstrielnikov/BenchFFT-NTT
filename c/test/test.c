@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "fft_split_test.c"
+#include "fft_split_test.h"
+
 
 int main() {
     test_fft_split();
