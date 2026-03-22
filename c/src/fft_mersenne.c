@@ -1,8 +1,6 @@
-#pragma once
 #include <bigint.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include <math.h>
 #include <m61_math.h>
 

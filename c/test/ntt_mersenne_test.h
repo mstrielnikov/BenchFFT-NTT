@@ -12,8 +12,8 @@
 
 
 void test_ntt_mersenne(void) {
-    run_mul_tests("NTT MERSENNE", biguint_mul_ntt_mersenne);
+    run_mul_tests("NTT (M61)", biguint_mul_ntt_mersenne);
 #if HAS_AVX
-    run_mul_tests("NTT MERSENNE AVX", biguint_mul_ntt_mersenne_avx);
+    run_mul_tests("NTT (M61) AVX", biguint_mul_ntt_mersenne_avx);
 #endif
 }

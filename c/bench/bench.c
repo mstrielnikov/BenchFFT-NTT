@@ -1,7 +1,4 @@
-#include <bigint.h>
 #include <stdio.h>
-#include <time.h>
-#include <stdlib.h>
 #include "fft_split_bench.h"
 #include "fft_mersenne_bench.h"
 #include "ntt_mersenne_bench.h"

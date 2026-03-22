@@ -41,4 +41,9 @@ BigUInt *biguint_mul_ntt_mersenne_avx(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont_avx(const BigUInt *a, const BigUInt *b);
 #endif
 
+#ifdef __x86_64__
+BigUInt *biguint_mul_ntt_mont_asm(const BigUInt *a, const BigUInt *b);
+#endif
+
+
 #endif

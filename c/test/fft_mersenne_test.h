@@ -8,5 +8,5 @@
 
 
 void test_fft_mersenne(void) {
-    run_mul_tests("FFT MERSENNE", biguint_mul_fft_mersenne);
+    run_mul_tests("FFT (M61)", biguint_mul_fft_mersenne);
 }

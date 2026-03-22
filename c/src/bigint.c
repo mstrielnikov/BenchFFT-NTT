@@ -1,6 +1,8 @@
 #include <bigint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+
 
 void biguint_normalize(BigUInt *a) {
     while (a->len > 0 && a->words[a->len - 1] == 0) {
