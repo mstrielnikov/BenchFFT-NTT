@@ -1,3 +1,4 @@
+#pragma once
 /*
  * ntt_mersenne_avx.c — Direct Mersenne M61 NTT with AVX2 vectorisation.
  *

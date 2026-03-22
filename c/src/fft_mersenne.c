@@ -1,3 +1,4 @@
+#pragma once
 #include <bigint.h>
 #include <stdlib.h>
 #include <stdint.h>

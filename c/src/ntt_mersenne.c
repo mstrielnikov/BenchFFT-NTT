@@ -1,3 +1,4 @@
+#pragma once
 /*
  * ntt_mersenne.c — Scalar NTT over the Mersenne prime field F_{M61}.
  *
