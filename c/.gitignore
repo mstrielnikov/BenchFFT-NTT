@@ -1,0 +1,11 @@
+# C build artifacts
+obj/
+lib/
+test/test
+test/bench
+test/test_scalar
+test/bench_scalar
+test/test_avx
+test/bench_avx
+test/bench_mersenne
+test/bench_mersenne_avx
