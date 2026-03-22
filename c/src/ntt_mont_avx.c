@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NTT_MONT_AVX_C_INCLUDED
+#define NTT_MONT_AVX_C_INCLUDED
 /*
  * ntt_mont_avx.c — Montgomery NTT (mod 998244353) with AVX2 vectorisation.
  *
@@ -172,3 +173,4 @@ BigUInt *biguint_mul_ntt_mont_avx(const BigUInt *a, const BigUInt *b) {
 
     return res;
 }
+#endif

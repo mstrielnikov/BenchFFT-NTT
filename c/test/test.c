@@ -6,12 +6,14 @@
 #include "fft_split_test.h"
 #include "fft_mersenne_test.h"
 #include "ntt_mersenne_test.h"
+#include "ntt_mont_test.h"
 
 
 int main() {
     test_fft_split();
     test_fft_mersenne();
     test_ntt_mersenne();
+    test_ntt_mont();
     
     printf("\n====================\n");
     printf("TOTAL: %d passed, %d failed\n", tests_passed, tests_failed);

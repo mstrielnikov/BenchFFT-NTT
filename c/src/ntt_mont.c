@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NTT_MONT_C_INCLUDED
+#define NTT_MONT_C_INCLUDED
 #include <bigint.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -115,3 +116,4 @@ BigUInt *biguint_mul_ntt_mont(const BigUInt *a, const BigUInt *b) {
     
     return res;
 }
+#endif

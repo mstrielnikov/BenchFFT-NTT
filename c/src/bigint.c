@@ -47,10 +47,6 @@ BigUInt *biguint_from_slice(const uint64_t *words, size_t len) {
     return a;
 }
 
-// BigUInt *biguint_clone(const BigUInt *a) {
-//     return biguint_from_slice(a->words, a->len);
-// }
-
 void biguint_free(BigUInt *a) {
     if (a) {
         free(a->words);

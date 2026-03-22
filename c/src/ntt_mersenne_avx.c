@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NTT_MERSENNE_AVX_C_INCLUDED
+#define NTT_MERSENNE_AVX_C_INCLUDED
 /*
  * ntt_mersenne_avx.c — Direct Mersenne M61 NTT with AVX2 vectorisation.
  *
@@ -301,3 +302,4 @@ BigUInt *biguint_mul_ntt_mersenne_scalar(const BigUInt *a, const BigUInt *b) {
     biguint_normalize(res);
     return res;
 }
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NTT_MERSENNE_C_INCLUDED
+#define NTT_MERSENNE_C_INCLUDED
 /*
  * ntt_mersenne.c — Scalar NTT over the Mersenne prime field F_{M61}.
  *
@@ -150,3 +151,4 @@ BigUInt *biguint_mul_ntt_mersenne(const BigUInt *a, const BigUInt *b) {
     biguint_normalize(res);
     return res;
 }
+#endif
