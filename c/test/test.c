@@ -4,10 +4,12 @@
 #include <string.h>
 
 #include "fft_split_test.h"
+#include "fft_mersenne_test.h"
 
 
 int main() {
     test_fft_split();
+    test_fft_mersenne();
     
     printf("\n====================\n");
     printf("TOTAL: %d passed, %d failed\n", tests_passed, tests_failed);

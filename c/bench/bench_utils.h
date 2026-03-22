@@ -1,3 +1,4 @@
+#pragma once
 #include <bigint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,7 +6,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <stdio.h>
-#include "../src/fft_split.c"
+
 
 /* ── Standard benchmark configuration ───────────────────────────────────── */
 

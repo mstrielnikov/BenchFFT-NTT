@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../test/test_utils.h"
+#include "test_utils.h"
 #include "../src/fft_split.c"
 
 #if HAS_AVX

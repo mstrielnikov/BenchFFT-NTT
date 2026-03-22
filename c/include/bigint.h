@@ -34,6 +34,7 @@ BigUInt *biguint_mul_fft_split(const BigUInt *a, const BigUInt *b);
 
 #if HAS_AVX
 BigUInt *biguint_mul_fft_split_avx(const BigUInt *a, const BigUInt *b);
+BigUInt *biguint_mul_fft_mersenne(const BigUInt *a, const BigUInt *b);
 
 #endif
 
