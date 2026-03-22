@@ -68,4 +68,5 @@ static void run_benchmark(const char *tag,
 
         biguint_free(a); biguint_free(b);
     }
+    printf("\n");
 }

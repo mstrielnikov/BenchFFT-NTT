@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "fft_split_bench.h"
 #include "fft_mersenne_bench.h"
+#include "ntt_mersenne_bench.h"
 
 
 int main() {
@@ -15,6 +16,7 @@ int main() {
 
     benchmark_fft_split();
     benchmark_fft_mersenne();
+    benchmark_ntt_mersenne();
 
     printf("================================\n");
     return 0;

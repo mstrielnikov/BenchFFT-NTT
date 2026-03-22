@@ -3,19 +3,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+#include <m61_math.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
-
-#define M61_MOD (2305843009213693951ULL)
-#define M61_P (61)
-
-static inline uint64_t m61_reduce(uint64_t x) {
-    uint64_t t = (x >> M61_P) + (x & M61_MOD);
-    t += (t >> M61_P);
-    return t & M61_MOD;
-}
 
 static void fft_mersenne_inplace(double *re, double *im, size_t n, bool inverse) {
     for (size_t i = 1, j = 0; i < n; i++) {
