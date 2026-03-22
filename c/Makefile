@@ -1,6 +1,6 @@
 CC      = gcc
-CFLAGS        = -Wall -Wextra -O3 -std=c11 -I include -mavx2 -mfma -funroll-loops
-CFLAGS_SCALAR = -Wall -Wextra -O3 -std=c11 -I include -fno-tree-vectorize
+CFLAGS        = -Wall -Wextra -O3 -std=c11 -I include -mavx2 -mfma -funroll-loops -fPIC
+CFLAGS_SCALAR = -Wall -Wextra -O3 -std=c11 -I include -fno-tree-vectorize -fPIC
 LDFLAGS = -lm
 
 SRC_DIR   = src
@@ -35,7 +35,7 @@ BENCH_MAIN  = $(BENCH_DIR)/bench.c
 BENCH_BIN   = $(BENCH_DIR)/bench
 BENCH_DEPS  = $(wildcard $(BENCH_DIR)/*.h) $(wildcard $(SRC_DIR)/*.c) $(wildcard include/*.h)
 
-.PHONY: all build build-scalar build-avx test bench clean
+.PHONY: all build build-scalar build-avx build-shared test bench clean verify
 
 all: build test bench
 
@@ -66,9 +66,13 @@ $(LIB_DIR)/libfft_scalar.a: $(OBJS_SCALAR) | $(LIB_DIR)
 $(LIB_DIR)/libfft_avx.a: $(OBJS_SCALAR) $(OBJS_AVX) $(OBJS_ASM) | $(LIB_DIR)
 	ar rcs $@ $^
 
+$(LIB_DIR)/libfft_both.so: $(OBJS_SCALAR) $(OBJS_AVX) $(OBJS_ASM) | $(LIB_DIR)
+	$(CC) -shared -o $@ $^ $(LDFLAGS)
+
 build-scalar: $(LIB_DIR)/libfft_scalar.a
 build-avx:    $(LIB_DIR)/libfft_avx.a
-build: build-scalar build-avx
+build-shared: $(LIB_DIR)/libfft_both.so
+build: build-scalar build-avx build-shared
 
 # ── Test ─────────────────────────────────────────────────────────────────────
 
@@ -85,6 +89,11 @@ $(BENCH_BIN): $(BENCH_MAIN) $(BENCH_DEPS) $(SRC_DIR)/bigint.c
 
 bench: $(BENCH_BIN)
 	./$(BENCH_BIN)
+
+# ── Lean Verification ────────────────────────────────────────────────────────
+
+verify: build-shared
+	python3 verify_runtime.py
 
 # ── Clean ─────────────────────────────────────────────────────────────────────
 clean:
