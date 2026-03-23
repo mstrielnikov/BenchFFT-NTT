@@ -41,6 +41,14 @@ make build-shared    # libfft_both.so  (required for verify)
 - **Reduction**: Shift-and-add (no division)
 - **Note**: M61's 61-bit arithmetic maps poorly to AVX; scalar is comparable
 
+### NTT CRT (Multi-modular, 3-prime)
+
+- **File**: `src/ntt_crt.c`
+- **Moduli**: P1 = 998244353, P2 = 985661441, P3 = 754974721
+- **Strategy**: Run three independent NTTs (one per prime), combine results via Garner's algorithm (iterated CRT), carry-propagate into base-2^64 BigUInt words
+- **Exact for**: inputs ≤ √(P1·P2·P3) ≈ 2^45 per limb; extend by splitting 64-bit words to 32 bits
+- **Domain**: P1·P2·P3 ≈ 2^90 covers both operands being ≤ 2^45
+
 ## Benchmark Results
 
 ### Standard Multiplication (O(N²))
@@ -55,6 +63,17 @@ _Reference bounds for polynomial multiplication._
 | 2048 | 39.45       | 15.85     |
 | 3072 | 44.47       | 17.88     |
 | 4096 | 47.36       | 19.13     |
+
+### NTT CRT (3-prime multi-modular)
+
+| Size | Scalar (ms) |
+| ---- | ----------- |
+| 256  | 29.99       |
+| 512  | 31.47       |
+| 1024 | 26.63       |
+| 2048 | 28.52       |
+| 3072 | 29.89       |
+| 4096 | 18.32       |
 
 ### FFT
 

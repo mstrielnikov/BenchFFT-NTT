@@ -34,6 +34,7 @@ BigUInt *biguint_mul_fft_mersenne(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mersenne(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont_m61(const BigUInt *a, const BigUInt *b);   /* Integer-NTT mod 998244353 → M61 reduction*/
+BigUInt *biguint_mul_ntt_crt(const BigUInt *a, const BigUInt *b);        /* Multi-modular NTT + CRT exact reconstruction */
 
 BigUInt *biguint_mul_standard(const BigUInt *a, const BigUInt *b);
 
