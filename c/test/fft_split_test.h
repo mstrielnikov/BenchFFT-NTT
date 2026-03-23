@@ -12,8 +12,8 @@
 
 
 void test_fft_split(void) {
-    run_mul_tests("FFT SPLIT", biguint_mul_fft_split);
+    run_mul_tests("FFT (SPLIT)", biguint_mul_fft_split);
 #if HAS_AVX
-    run_mul_tests("FFT SPLIT AVX", biguint_mul_fft_split_avx);
+    run_mul_tests("FFT (SPLIT) AVX", biguint_mul_fft_split_avx);
 #endif
 }

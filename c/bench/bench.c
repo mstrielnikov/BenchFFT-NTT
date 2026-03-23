@@ -3,6 +3,7 @@
 #include "fft_mersenne_bench.h"
 #include "ntt_mersenne_bench.h"
 #include "ntt_mont.h"
+#include "mult_standard_bench.h"
 
 
 int main() {
@@ -12,6 +13,7 @@ int main() {
 
     srand(42);
 
+    benchmark_mult_standard();
     benchmark_fft_split();
     benchmark_fft_mersenne();
     benchmark_ntt_mersenne();

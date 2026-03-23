@@ -7,9 +7,11 @@
 #include "fft_mersenne_test.h"
 #include "ntt_mersenne_test.h"
 #include "ntt_mont_test.h"
+#include "mult_standard_test.h"
 
 
 int main() {
+    test_mult_standard();
     test_fft_split();
     test_fft_mersenne();
     test_ntt_mersenne();

@@ -43,6 +43,19 @@ make build-shared    # libfft_both.so  (required for verify)
 
 ## Benchmark Results
 
+### Standard Multiplication (O(N²))
+
+_Reference bounds for polynomial multiplication._
+
+| Size | Scalar (ms) | AVX2 (ms) |
+| ---- | ----------- | --------- |
+| 256  | 12.89       | 2.49      |
+| 512  | 12.73       | 5.01      |
+| 1024 | 19.98       | 7.94      |
+| 2048 | 39.45       | 15.85     |
+| 3072 | 44.47       | 17.88     |
+| 4096 | 47.36       | 19.13     |
+
 ### FFT
 
 | Size | Scalar  | Auto-Vec | AVX Intrinsics |
