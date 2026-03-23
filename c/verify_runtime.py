@@ -48,7 +48,7 @@ def load_lib(path: str) -> ctypes.CDLL:
     for fn in ("biguint_mul_fft_split", "biguint_mul_fft_mersenne",
                "biguint_mul_ntt_mont", "biguint_mul_ntt_mont_asm",
                "biguint_mul_ntt_mont_m61", "biguint_mul_standard",
-               "biguint_mul_standard_avx"):
+               "biguint_mul_standard_avx", "biguint_mul_ntt_crt"):
         f = getattr(lib, fn)
         f.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
         f.restype  = ctypes.c_void_p
@@ -88,6 +88,7 @@ KNOWN_EXPECTED = 12345 * 67890   # 838102050
 MAIN_IMPLS = [
     "biguint_mul_standard",
     "biguint_mul_standard_avx",
+    "biguint_mul_ntt_crt",
     "biguint_mul_fft_split",
     "biguint_mul_ntt_mont",
     "biguint_mul_ntt_mont_asm",
@@ -150,6 +151,7 @@ def run_agreement_tests(lib: ctypes.CDLL) -> int:
         ("biguint_mul_fft_mersenne", "biguint_mul_ntt_mont_m61", 31594),
         ("biguint_mul_standard",     "biguint_mul_standard_avx", 2**64 - 1),
         ("biguint_mul_standard",     "biguint_mul_fft_split",    31594), # Fits in Z and IEEE754 double exactness
+        ("biguint_mul_ntt_crt",      "biguint_mul_standard",     27255146443055), # sqrt(P1*P2*P3) ≈ 2^45
     ]
     for fn_a, fn_b, max_val in pairs:
         la = fn_a.replace("biguint_mul_", "")
