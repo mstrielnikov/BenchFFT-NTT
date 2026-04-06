@@ -9,6 +9,7 @@
 #include "ntt_mont_test.h"
 #include "mult_standard_test.h"
 #include "ntt_crt_test.h"
+#include "nussbaumer_test.h"
 
 
 int main() {
@@ -18,6 +19,7 @@ int main() {
     test_ntt_mersenne();
     test_ntt_mont();
     test_ntt_crt();
+    test_nussbaumer();
     
     printf("\n====================\n");
     printf("TOTAL: %d passed, %d failed\n", tests_passed, tests_failed);

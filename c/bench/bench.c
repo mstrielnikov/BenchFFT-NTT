@@ -5,6 +5,7 @@
 #include "ntt_mont.h"
 #include "mult_standard_bench.h"
 #include "ntt_crt_bench.h"
+#include "nussbaumer_bench.h"
 
 
 int main() {
@@ -20,6 +21,7 @@ int main() {
     benchmark_ntt_mersenne();
     benchmark_ntt_mont();
     benchmark_ntt_crt();
+    benchmark_nussbaumer();
 
     printf("================================\n");
     return 0;
