@@ -38,6 +38,8 @@ BigUInt *biguint_mul_ntt_mont(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont_m61(const BigUInt *a, const BigUInt *b);   /* Integer-NTT mod 998244353 → M61 reduction*/
 BigUInt *biguint_mul_ntt_crt(const BigUInt *a, const BigUInt *b);        /* Multi-modular NTT + CRT exact reconstruction */
 BigUInt *biguint_mul_nussbaumer(const BigUInt *a, const BigUInt *b);
+BigUInt *biguint_mul_bluestein(const BigUInt *a, const BigUInt *b);
+
 
 #if HAS_AVX
 BigUInt *biguint_mul_standard_avx(const BigUInt *a, const BigUInt *b);

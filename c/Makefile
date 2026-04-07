@@ -1,6 +1,6 @@
 CC      = gcc
-CFLAGS        = -Wall -Wextra -O3 -std=c11 -I include -mavx2 -mfma -funroll-loops -fPIC
-CFLAGS_SCALAR = -Wall -Wextra -O3 -std=c11 -I include -fno-tree-vectorize -fPIC
+CFLAGS        = -Wall -Wextra -O3 -std=c11 -I include -mavx2 -mfma -mpclmul -funroll-loops -fPIC
+CFLAGS_SCALAR = -Wall -Wextra -O3 -std=c11 -I include -mpclmul -fno-tree-vectorize -fPIC
 LDFLAGS = -lm
 
 SRC_DIR   = src
