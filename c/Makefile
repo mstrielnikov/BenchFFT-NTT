@@ -1,6 +1,6 @@
 CC      = gcc
-CFLAGS        = -Wall -Wextra -O3 -std=c11 -I include -mavx2 -mfma -funroll-loops -fPIC
-CFLAGS_SCALAR = -Wall -Wextra -O3 -std=c11 -I include -fno-tree-vectorize -fPIC
+CFLAGS        = -Wall -Wextra -O3 -std=c11 -I include -mavx2 -mfma -mpclmul -funroll-loops -fPIC
+CFLAGS_SCALAR = -Wall -Wextra -O3 -std=c11 -I include -mpclmul -fno-tree-vectorize -fPIC
 LDFLAGS = -lm
 
 SRC_DIR   = src
@@ -18,7 +18,7 @@ SRCS_AVX       := $(filter %_avx.c, $(ALL_SRCS))
 SRCS_ASM       := $(filter %_asm.c, $(ALL_SRCS))
 
 # Everything else is considered scalar (including bigint.c, fft_mersenne.c, etc.)
-SRCS_SCALAR    := $(filter-out $(SRCS_AVX) $(SRCS_ASM), $(ALL_SRCS))
+SRCS_SCALAR    := $(filter-out $(SRCS_AVX) $(SRCS_ASM), $(ALL_SRCS)) src/nussbaumer.c
 
 # Object files
 OBJS_SCALAR    := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%_scalar.o, $(SRCS_SCALAR))
