@@ -11,6 +11,7 @@
 #include "ntt_crt_test.h"
 #include "nussbaumer_test.h"
 #include "bluestein_test.h"
+#include "toom3_test.h"
 
 
 int main() {
@@ -22,6 +23,7 @@ int main() {
     test_ntt_crt();
     test_nussbaumer();
     test_bluestein();
+    test_toom3();
     
     printf("\n====================\n");
     printf("TOTAL: %d passed, %d failed\n", tests_passed, tests_failed);

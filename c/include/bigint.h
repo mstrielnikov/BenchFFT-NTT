@@ -39,6 +39,7 @@ BigUInt *biguint_mul_ntt_mont_m61(const BigUInt *a, const BigUInt *b);   /* Inte
 BigUInt *biguint_mul_ntt_crt(const BigUInt *a, const BigUInt *b);        /* Multi-modular NTT + CRT exact reconstruction */
 BigUInt *biguint_mul_nussbaumer(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_bluestein(const BigUInt *a, const BigUInt *b);
+BigUInt *biguint_mul_toom3(const BigUInt *a, const BigUInt *b);
 
 
 #if HAS_AVX
@@ -46,6 +47,8 @@ BigUInt *biguint_mul_standard_avx(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_fft_split_avx(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mersenne_avx(const BigUInt *a, const BigUInt *b);
 BigUInt *biguint_mul_ntt_mont_avx(const BigUInt *a, const BigUInt *b);
+BigUInt *biguint_mul_ntt_mont_m61_avx(const BigUInt *a, const BigUInt *b);
+BigUInt *biguint_mul_toom3_avx(const BigUInt *a, const BigUInt *b);
 #endif
 
 #ifdef __x86_64__
